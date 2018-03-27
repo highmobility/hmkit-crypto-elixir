@@ -10,4 +10,5 @@ cache:
 script:
   - mix test
   - MIX_ENV=test mix dialyzer --halt-exit-status
+  - mix format --check-formatted
 
