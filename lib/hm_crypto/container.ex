@@ -53,7 +53,7 @@ defmodule HMCrypto.Container do
   @spec enclose(
           command,
           serial_number,
-          HmAutoApi.Crypto.private_key(),
+          Crypto.private_key(),
           HMCrypto.AccessCertificate.access_certificate_binary(),
           nonce
         ) :: secure_command
