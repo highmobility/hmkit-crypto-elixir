@@ -54,7 +54,7 @@ defmodule HMCrypto.Container do
           command,
           serial_number,
           HmAutoApi.Crypto.private_key(),
-          HMCrypto.AccessCertificate.access_certificate(),
+          HMCrypto.AccessCertificate.access_certificate_binary(),
           nonce
         ) :: secure_command
   def enclose(command, serial_number, private_key, access_certificate, nonce) do
@@ -76,7 +76,7 @@ defmodule HMCrypto.Container do
   @spec disclose(
           secure_command,
           Crypto.private_key(),
-          HMCrypto.AccessCertificate.access_certificate()
+          HMCrypto.AccessCertificate.access_certificate_binary()
         ) :: {:ok, command} | {:error, disclose_error}
   def disclose(container_data, private_key, access_certificate) do
     %{command: command, encrypted_flag: encrypted_flag?, car_serial: _, nonce: nonce} =
@@ -167,8 +167,8 @@ defmodule HMCrypto.Container do
   @spec enclose_command(
           binary,
           Crypto.private_key(),
-          HMCrypto.AccessCertificate.access_certificate(),
-          Container.nonce()
+          HMCrypto.AccessCertificate.access_certificate_binary(),
+          nonce()
         ) :: binary
   def enclose_command(command, private_key, access_certificate, nonce) do
     session_key =
@@ -193,8 +193,8 @@ defmodule HMCrypto.Container do
   @spec disclose_command(
           binary,
           Crypto.private_key(),
-          HMCrypto.AccessCertificate.access_certificate(),
-          Container.nonce()
+          HMCrypto.AccessCertificate.access_certificate_binary(),
+          nonce()
         ) :: {:ok, binary} | {:error, disclose_error}
   def disclose_command(encrypted_command, private_key, access_certificate, nonce) do
     session_key =

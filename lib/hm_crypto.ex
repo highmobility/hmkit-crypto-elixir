@@ -18,4 +18,7 @@
 # licensing@high-mobility.com
 
 defmodule HMCrypto do
+  @moduledoc """
+  HMCrypto is securing communication between two parties using public key infrastructure
+  """
 end
