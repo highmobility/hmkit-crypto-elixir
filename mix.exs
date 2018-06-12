@@ -22,7 +22,9 @@ defmodule HMCrypto.MixProject do
   defp deps do
     [
       {:credo, "~> 0.8.10", only: [:dev, :test]},
-      {:dialyxir, "~> 0.5", only: [:dev, :test], runtime: false}
+      {:dialyxir, "~> 0.5", only: [:dev, :test], runtime: false},
+      {:ex_doc, "~> 0.18.1", only: :dev},
+      {:earmark, "~> 1.2", only: :dev}
     ]
   end
 end
