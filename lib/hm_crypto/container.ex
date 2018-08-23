@@ -24,6 +24,18 @@ defmodule HMCrypto.Container do
 
   alias HMCrypto.Crypto
 
+  defstruct target_serial: <<>>,
+            nonce: <<>>,
+            command: <<>>,
+            encrypted_flag: 0
+
+  @type t :: %__MODULE__{
+          target_serial: <<_::72>>,
+          nonce: <<_::72>>,
+          command: binary,
+          encrypted_flag: integer
+        }
+
   @type disclose_error ::
           :invalid_hmac | :invalid_secure_command | :invalid_secure_command | :unencrypted_command
   @type nonce :: <<_::72>>
@@ -79,7 +91,7 @@ defmodule HMCrypto.Container do
           HMCrypto.AccessCertificate.access_certificate_binary()
         ) :: {:ok, command} | {:error, disclose_error}
   def disclose(container_data, private_key, access_certificate) do
-    %{command: command, encrypted_flag: encrypted_flag?, car_serial: _, nonce: nonce} =
+    %{command: command, encrypted_flag: encrypted_flag?, target_serial: _, nonce: nonce} =
       destruct_container(container_data)
 
     if encrypted_flag? == 0x00 do
@@ -107,15 +119,37 @@ defmodule HMCrypto.Container do
     command
   end
 
-  defp destruct_container(command) do
-    inside_size = byte_size(command) - 2
-    <<0x00, inside_data::binary-size(inside_size), 0xFF>> = command
+  @doc """
+  Destruct container binary to `%Container{}`
+
+      iex> serial_number = <<93, 151, 197, 254, 242, 65, 186, 175, 170>>
+      iex> private_key = "9JFamPU0SF35y3c4TOt1frNwamZUQcUSD5dvOOu7xpw="
+      iex> access_cert = "985tN4j0KNRqnpm0SD3UekJJLTS8nu5TBKUmcqDwjolao1UgGntXgs5hxdZIXu77up96IpwKUIyDVWjtamZwyaqk6AGdDC9SARqs41rSMcXruBEIAws1EQkCCzUHEAf//f/v/6+MpCSOvbhpyQpDnRYi89It6XqEm9TAevyFu3GrCLIbBWNk1rwuRmOL4KRhfSnMCNkhsHXCUvkEBU4SzUgcEvg="
+      iex> nonce = :crypto.strong_rand_bytes(9)
+      iex> contained_msg = HMCrypto.Container.enclose(<<0x00>>, serial_number, Base.decode64!(private_key), Base.decode64!(access_cert), nonce)
+      iex> %HMCrypto.Container{nonce: destruct_nonce, encrypted_flag: destruct_encrypted_flag , target_serial: destruct_serial } = HMCrypto.Container.destruct_container(contained_msg)
+      iex> destruct_nonce == nonce
+      true
+      iex> destruct_encrypted_flag == 1
+      true
+      iex> destruct_serial == serial_number
+      true
+  """
+  @spec destruct_container(binary) :: t
+  def destruct_container(container_data) when byte_size(container_data) > 21 do
+    inside_size = byte_size(container_data) - 2
+    <<0x00, inside_data::binary-size(inside_size), 0xFF>> = container_data
     inside_data = remove_paddings(inside_data)
 
-    <<car_serial::binary-size(9), nonce::binary-size(9), encrypted_flag, command::binary>> =
+    <<target_serial::binary-size(9), nonce::binary-size(9), encrypted_flag, command::binary>> =
       inside_data
 
-    %{car_serial: car_serial, nonce: nonce, command: command, encrypted_flag: encrypted_flag}
+    %__MODULE__{
+      target_serial: target_serial,
+      nonce: nonce,
+      command: command,
+      encrypted_flag: encrypted_flag
+    }
   end
 
   defp add_paddings(<<>>), do: <<>>
