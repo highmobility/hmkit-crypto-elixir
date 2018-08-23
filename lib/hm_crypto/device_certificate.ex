@@ -1,4 +1,4 @@
-# HMCrypto
+# HmCrypto
 # Copyright (C) 2018 High-Mobility GmbH
 #
 # This program is free software: you can redistribute it and/or modify
@@ -17,19 +17,19 @@
 # Please inquire about commercial licensing options at
 # licensing@high-mobility.com
 
-defmodule HMCrypto.DeviceCertificate do
+defmodule HmCrypto.DeviceCertificate do
   defstruct app_id: nil, serial_number: nil, public_key: nil, signature: nil, issuer_name: nil
 
-  @type t :: %HMCrypto.DeviceCertificate{
+  @type t :: %HmCrypto.DeviceCertificate{
           app_id: <<_::96>>,
           serial_number: <<_::72>>,
-          public_key: HMCrypto.Crypto.public_key(),
-          issuer_name: HMCrypto.Issuer.name(),
+          public_key: HmCrypto.Crypto.public_key(),
+          issuer_name: HmCrypto.Issuer.name(),
           signature: binary
         }
 
   alias __MODULE__
-  alias HMCrypto.{Crypto, Issuer}
+  alias HmCrypto.{Crypto, Issuer}
 
   @doc """
   Validates and creates new DeviceCertificate struct

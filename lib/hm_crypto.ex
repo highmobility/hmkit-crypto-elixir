@@ -1,4 +1,4 @@
-# HMCrypto
+# HmCrypto
 # Copyright (C) 2018 High-Mobility GmbH
 #
 # This program is free software: you can redistribute it and/or modify
@@ -17,8 +17,8 @@
 # Please inquire about commercial licensing options at
 # licensing@high-mobility.com
 
-defmodule HMCrypto do
+defmodule HmCrypto do
   @moduledoc """
-  HMCrypto is securing communication between two parties using public key infrastructure
+  HmCrypto is securing communication between two parties using public key infrastructure
   """
 end

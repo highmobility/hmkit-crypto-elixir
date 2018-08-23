@@ -1,4 +1,4 @@
-# HMCrypto
+# HmCrypto
 # Copyright (C) 2018 High-Mobility GmbH
 #
 # This program is free software: you can redistribute it and/or modify
@@ -17,7 +17,7 @@
 # Please inquire about commercial licensing options at
 # licensing@high-mobility.com
 
-defmodule HMCrypto.Crypto do
+defmodule HmCrypto.Crypto do
   @signed_curve :secp256r1
 
   @type private_key :: <<_::256>>
@@ -28,7 +28,7 @@ defmodule HMCrypto.Crypto do
 
   It returns compact version of public key which is leading 0x4 is removed
 
-      iex> {public_key, private_key} = HMCrypto.Crypto.generate_key
+      iex> {public_key, private_key} = HmCrypto.Crypto.generate_key
       iex> byte_size(public_key)
       64
       iex> byte_size(private_key)
@@ -47,15 +47,15 @@ defmodule HMCrypto.Crypto do
 
       iex> key = <<115, 228, 83, 59, 244, 133, 161, 194, 199, 241, 63, 123, 104, 1, 218, 147, 81, 95, 75, 191, 203, 174, 87, 44, 223, 32, 113, 121, 205, 50, 151, 177>>
       iex> message = <<40, 175, 134, 252, 218, 233, 81, 240, 96>>
-      iex> HMCrypto.Crypto.hmac(key, message, :v1)
+      iex> HmCrypto.Crypto.hmac(key, message, :v1)
       <<165, 117, 127, 113, 199, 48, 40, 92, 16, 83, 172, 172, 120, 31, 145, 194, 252, 28, 21, 86, 108, 83, 131, 77, 160, 243, 233, 188, 211, 56, 0, 186>>
 
       iex> key = <<115, 228, 83, 59, 244, 133, 161, 194, 199, 241, 63, 123, 104, 1, 218, 147, 81, 95, 75, 191, 203, 174, 87, 44, 223, 32, 113, 121, 205, 50, 151, 177>>
       iex> message = <<40, 175, 134, 252, 218, 233, 81, 240, 96>>
-      iex> HMCrypto.Crypto.hmac(key, message, :v2)
+      iex> HmCrypto.Crypto.hmac(key, message, :v2)
       <<185, 190, 231, 253, 176, 49, 208, 104, 185, 136, 191, 50, 64, 151, 1, 163, 172, 2, 184, 146, 234, 32, 241, 103, 193, 98, 79, 87, 17, 12, 169, 142>>
       iex> message = String.duplicate(<<0x01>>, 65)
-      iex> HMCrypto.Crypto.hmac(key, message, :v2)
+      iex> HmCrypto.Crypto.hmac(key, message, :v2)
       <<83, 125, 18, 189, 5, 102, 116, 117, 160, 193, 19, 130, 164, 85, 201, 143, 175, 106, 15, 143, 156, 169, 7, 247, 175, 155, 98, 160, 196, 148, 39, 129>>
 
   """
@@ -81,13 +81,13 @@ defmodule HMCrypto.Crypto do
 
       iex> private_key = "9JFamPU0SF35y3c4TOt1frNwamZUQcUSD5dvOOu7xpw="
       iex> access_cert_v0 = "985tN4j0KNRqnpm0SD3UekJJLTS8nu5TBKUmcqDwjolao1UgGntXgs5hxdZIXu77up96IpwKUIyDVWjtamZwyaqk6AGdDC9SARqs41rSMcXruBEIAws1EQkCCzUHEAf//f/v/6+MpCSOvbhpyQpDnRYi89It6XqEm9TAevyFu3GrCLIbBWNk1rwuRmOL4KRhfSnMCNkhsHXCUvkEBU4SzUgcEvg="
-      iex> HMCrypto.Crypto.compute_key(Base.decode64!(private_key), Base.decode64!(access_cert_v0)) |> Base.encode64
+      iex> HmCrypto.Crypto.compute_key(Base.decode64!(private_key), Base.decode64!(access_cert_v0)) |> Base.encode64
       "c+RTO/SFocLH8T97aAHak1FfS7/Lrlcs3yBxec0yl7E="
       iex> access_cert_v1 = "AXRtY3NOhYW633ctVZmRq+gXlHUSQ/a55N3sUZGUfAGaOfw+/C5DIhGelCWmClEWJEzLkmD5CzTbeHJTFBZ9Qh73mGX3XBhHFnFEc3DwETCyEW5YO0KGEQsdCRERDB0JEQcQB//9/+//KCBMF36Nt73aPCydO2Nt9+shOHtbHFSAIZSy/FRmIcH0z1d0PJRkwvPD2fLXicH2HYjDlYTaOhpTz0CpSoWfGg=="
-      iex> HMCrypto.Crypto.compute_key(Base.decode64!(private_key), Base.decode64!(access_cert_v1)) |> Base.encode64
+      iex> HmCrypto.Crypto.compute_key(Base.decode64!(private_key), Base.decode64!(access_cert_v1)) |> Base.encode64
       "gPK2rZLowBWK1TE+Vm1JJZanwg42yynT3wOH9uX2av8="
   """
-  @spec compute_key(private_key, HMCrypto.AccessCertificate.access_certificate_binary()) :: binary
+  @spec compute_key(private_key, HmCrypto.AccessCertificate.access_certificate_binary()) :: binary
   def compute_key(private_key, access_cert) do
     priv = {:ECPrivateKey, 1, private_key, {:namedCurve, :secp256r1}, <<>>}
 
@@ -109,9 +109,9 @@ defmodule HMCrypto.Crypto do
   @doc """
   Generates a signature for a message using elrang crypto
 
-      iex> {public_key, private_key} = HMCrypto.Crypto.generate_key
-      iex> signed_msg = HMCrypto.Crypto.sign("Blah Blah", private_key, :v2)
-      iex> HMCrypto.Crypto.verify("Blah Blah", signed_msg, public_key, :v2)
+      iex> {public_key, private_key} = HmCrypto.Crypto.generate_key
+      iex> signed_msg = HmCrypto.Crypto.sign("Blah Blah", private_key, :v2)
+      iex> HmCrypto.Crypto.verify("Blah Blah", signed_msg, public_key, :v2)
       true
 
   read more at https://crypto.stackexchange.com/questions/1795/how-can-i-convert-a-der-ecdsa-signature-to-asn-1/1797#1797
@@ -150,9 +150,9 @@ defmodule HMCrypto.Crypto do
   @doc """
   Generates a signature for a message using elrang crypto
 
-      iex> {public_key, private_key} = HMCrypto.Crypto.generate_key
-      iex> signed_msg = HMCrypto.Crypto.sign("Blah Blah", private_key, :v1)
-      iex> HMCrypto.Crypto.verify("Blah Blah", signed_msg, public_key, :v1)
+      iex> {public_key, private_key} = HmCrypto.Crypto.generate_key
+      iex> signed_msg = HmCrypto.Crypto.sign("Blah Blah", private_key, :v1)
+      iex> HmCrypto.Crypto.verify("Blah Blah", signed_msg, public_key, :v1)
       true
 
   [Read more](https://crypto.stackexchange.com/questions/1795/how-can-i-convert-a-der-ecdsa-signature-to-asn-1/1797#1797)
@@ -211,7 +211,8 @@ defmodule HMCrypto.Crypto do
     message <> :binary.copy(<<0x00>>, 256 - byte_size(message))
   end
 
-  defp expand_to_64_blocks(message) when byte_size(message) / 64 == round(byte_size(message) / 64) do
+  defp expand_to_64_blocks(message)
+       when byte_size(message) / 64 == round(byte_size(message) / 64) do
     message
   end
 

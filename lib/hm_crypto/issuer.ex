@@ -1,4 +1,4 @@
-# HMCrypto
+# HmCrypto
 # Copyright (C) 2018 High-Mobility GmbH
 #
 # This program is free software: you can redistribute it and/or modify
@@ -17,18 +17,18 @@
 # Please inquire about commercial licensing options at
 # licensing@high-mobility.com
 
-defmodule HMCrypto.Issuer do
+defmodule HmCrypto.Issuer do
   defstruct name: nil, private_key: nil
 
   @type name :: <<_::32>>
-  @type t :: %{name: name, private_key: HMCrypto.Crypto.private_key()}
+  @type t :: %{name: name, private_key: HmCrypto.Crypto.private_key()}
 
   alias __MODULE__
 
   @doc """
   Validates and creates new Issuer struct
   """
-  @spec new(keyword() | map()) :: {:ok, %HMCrypto.Issuer{}} | {:error, :invalid_input}
+  @spec new(keyword() | map()) :: {:ok, %HmCrypto.Issuer{}} | {:error, :invalid_input}
 
   def new(attrs) when is_list(attrs) do
     attrs

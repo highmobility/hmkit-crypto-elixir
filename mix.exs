@@ -1,4 +1,4 @@
-defmodule HMCrypto.MixProject do
+defmodule HmCrypto.MixProject do
   use Mix.Project
 
   def project do

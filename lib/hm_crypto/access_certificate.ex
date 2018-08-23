@@ -1,4 +1,4 @@
-# AutoAPI
+# HmCrypto
 # Copyright (C) 2018 High-Mobility GmbH
 #
 # This program is free software: you can redistribute it and/or modify
@@ -17,6 +17,7 @@
 # Please inquire about commercial licensing options at
 # licensing@high-mobility.com
 
-defmodule HMCrypto.AccessCertificate do
+defmodule HmCrypto.AccessCertificate do
+  @moduledoc false
   @type access_certificate_binary :: <<_::1312>>
 end

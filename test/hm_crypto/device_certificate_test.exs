@@ -1,4 +1,4 @@
-# AutoAPI
+# HmCrypto
 # Copyright (C) 2018 High-Mobility GmbH
 #
 # This program is free software: you can redistribute it and/or modify
@@ -17,9 +17,9 @@
 # Please inquire about commercial licensing options at
 # licensing@high-mobility.com
 
-defmodule HMCrypto.DeviceCertificateTest do
+defmodule HmCrypto.DeviceCertificateTest do
   use ExUnit.Case
-  alias HMCrypto.{DeviceCertificate, Issuer}
+  alias HmCrypto.{DeviceCertificate, Issuer}
   doctest DeviceCertificate
 
   setup do

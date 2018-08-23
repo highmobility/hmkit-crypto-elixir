@@ -1,8 +1,8 @@
-# HMCrypto
+# HmCrypto
 
 [![Build Status](https://travis-ci.org/highmobility/hm-crypto-elixir.svg?branch=master)](https://travis-ci.org/highmobility/hm-crypto-elixir)
 
-HMCrypto is securing communication between two parties using public key infrastructure.
+HmCrypto is securing communication between two parties using public key infrastructure.
 
 ## Installation
 
