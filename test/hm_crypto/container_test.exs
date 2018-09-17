@@ -19,5 +19,50 @@
 
 defmodule HmCrypto.ContainerTest do
   use ExUnit.Case
+  use PropCheck
   doctest HmCrypto.Container
+
+  property "symmetric enclosing/disclosing a command" do
+    forall data <- [
+             device_serial: serial_number(),
+             device_key_pair: key_pair(),
+             nonce: serial_number(),
+             command: binary()
+           ] do
+      private_key = elem(data[:device_key_pair], 1)
+
+      contained_msg =
+        HmCrypto.Container.enclose(
+          data[:command],
+          data[:device_serial],
+          private_key,
+          sample_access_cert(),
+          data[:nonce]
+        )
+
+      case HmCrypto.Container.disclose(contained_msg, private_key, sample_access_cert()) do
+        {:ok, cmd} -> cmd == data[:command]
+        _ -> false
+      end
+    end
+  end
+
+  def serial_number do
+    let _ <- any() do
+      :crypto.strong_rand_bytes(9)
+    end
+  end
+
+  def key_pair do
+    let _ <- any() do
+      HmCrypto.Crypto.generate_key()
+    end
+  end
+
+  def sample_access_cert do
+    # TODO: improve AccessCertificate model to create them on the fly
+    Base.decode64!(
+      "985tN4j0KNRqnpm0SD3UekJJLTS8nu5TBKUmcqDwjolao1UgGntXgs5hxdZIXu77up96IpwKUIyDVWjtamZwyaqk6AGdDC9SARqs41rSMcXruBEIAws1EQkCCzUHEAf//f/v/6+MpCSOvbhpyQpDnRYi89It6XqEm9TAevyFu3GrCLIbBWNk1rwuRmOL4KRhfSnMCNkhsHXCUvkEBU4SzUgcEvg="
+    )
+  end
 end
