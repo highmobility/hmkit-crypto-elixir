@@ -123,13 +123,21 @@ defmodule HmCrypto.AccessCertificate do
   def payload(access_certificate, issuer) do
     access_certificate
     |> Map.put(:issuer, issuer.name)
-    |> Map.put(:signature, nil)
     |> compact()
   end
 
-  defp compact(%AccessCertificate{issuer: nil_value, signature: nil_value})
-       when is_nil(nil_value),
-       do: raise(ArgumentError)
+  @doc """
+  converts AccessCertificate to binary value. The AccessCertificate should
+  contain the signature when this function is called. You may use `payload/2`
+  if only want the payload of AccessCertificate in binary
+  """
+  @spec to_bin(t) :: binary | no_return
+  def to_bin(%AccessCertificate{issuer: nil}), do: raise(ArgumentError)
+  def to_bin(%AccessCertificate{signature: nil}), do: raise(ArgumentError)
+
+  def to_bin(%AccessCertificate{} = access_certificate) do
+    compact(access_certificate) <> access_certificate.signature
+  end
 
   defp compact(%AccessCertificate{version: :v0} = certificate) do
     permissions = certificate.permissions
@@ -141,11 +149,7 @@ defmodule HmCrypto.AccessCertificate do
         certificate.start_date <>
         certificate.end_date <> <<byte_size(permissions)::8>> <> permissions
 
-    if is_nil(certificate.signature) do
-      result
-    else
-      result <> certificate.signature
-    end
+    result
   end
 
   defp compact(%AccessCertificate{version: :v1} = certificate) do
@@ -160,11 +164,7 @@ defmodule HmCrypto.AccessCertificate do
         certificate.start_date <>
         certificate.end_date <> <<byte_size(permissions)::8>> <> permissions
 
-    if is_nil(certificate.signature) do
-      result
-    else
-      result <> certificate.signature
-    end
+    result
   end
 
   defp encode_date(date) do
