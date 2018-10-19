@@ -44,9 +44,9 @@ defmodule HmAccessCertificateTest do
     test "validate date conversion", %{start_date: start_date, end_date: end_date} do
       access_cert =
         AccessCertificate.new(
+          @providing_serial,
           @gaining_serial,
           @gaining_public_key,
-          @providing_serial,
           start_date,
           end_date,
           @permissions
@@ -59,9 +59,9 @@ defmodule HmAccessCertificateTest do
     test "create v1 payload", %{start_date: start_date, end_date: end_date} do
       access_cert =
         AccessCertificate.new(
+          @providing_serial,
           @gaining_serial,
           @gaining_public_key,
-          @providing_serial,
           start_date,
           end_date,
           @permissions
@@ -90,9 +90,9 @@ defmodule HmAccessCertificateTest do
       access_cert =
         AccessCertificate.new_with_version(
           :v0,
+          @providing_serial,
           @gaining_serial,
           @gaining_public_key,
-          @providing_serial,
           start_date,
           end_date,
           @permissions

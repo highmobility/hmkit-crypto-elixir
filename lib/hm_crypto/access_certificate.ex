@@ -54,18 +54,18 @@ defmodule HmCrypto.AccessCertificate do
   @spec new(serial_number, Crypto.public_key(), serial_number, DateTime.t(), DateTime.t(), binary) ::
           t
   def new(
+        providing_serial,
         gaining_serial,
         gaining_public_key,
-        providing_serial,
         start_date,
         end_date,
         permissions
       ) do
     new_with_version(
       :v1,
+      providing_serial,
       gaining_serial,
       gaining_public_key,
-      providing_serial,
       start_date,
       end_date,
       permissions
@@ -87,9 +87,9 @@ defmodule HmCrypto.AccessCertificate do
         ) :: t
   def new_with_version(
         version,
+        providing_serial,
         gaining_serial,
         gaining_public_key,
-        providing_serial,
         start_date,
         end_date,
         permissions
