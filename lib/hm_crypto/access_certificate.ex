@@ -162,7 +162,7 @@ defmodule HmCrypto.AccessCertificate do
     if is_nil(certificate.signature) do
       result
     else
-      result <> Base.decode16!(certificate.signature)
+      result <> certificate.signature
     end
   end
 
