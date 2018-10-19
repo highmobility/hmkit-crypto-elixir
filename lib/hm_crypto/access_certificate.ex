@@ -123,6 +123,7 @@ defmodule HmCrypto.AccessCertificate do
   def payload(access_certificate, issuer) do
     access_certificate
     |> Map.put(:issuer, issuer.name)
+    |> Map.put(:signature, nil)
     |> compact()
   end
 

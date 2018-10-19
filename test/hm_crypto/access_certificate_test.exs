@@ -129,6 +129,26 @@ defmodule HmAccessCertificateTest do
 
       assert HmCrypto.Crypto.verify(payload, access_cert.signature, @issuer_public_key)
     end
+
+    test "payload shouldn't include the signature", %{start_date: start_date, end_date: end_date} do
+      access_cert =
+        AccessCertificate.new(
+          @gaining_serial,
+          @gaining_public_key,
+          @providing_serial,
+          start_date,
+          end_date,
+          @permissions
+        )
+
+      issuer = %Issuer{name: @issuer_identifier, private_key: @issuer_private_key}
+      payload = AccessCertificate.payload(access_cert, issuer)
+
+      assert access_cert = AccessCertificate.sign(access_cert, issuer)
+      assert payload == AccessCertificate.payload(access_cert, issuer)
+
+      assert HmCrypto.Crypto.verify(payload, access_cert.signature, @issuer_public_key)
+    end
   end
 
   def dates(_) do
