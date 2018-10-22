@@ -119,10 +119,14 @@ defmodule HmCrypto.AccessCertificate do
   @doc """
   Returns payload of AccessCertificate
   """
-  @spec payload(t, Issuer.t()) :: binary
-  def payload(access_certificate, issuer) do
+  @spec payload(t, Issuer.t() | Issuer.name()) :: binary
+  def payload(access_certificate, %Issuer{} = issuer) do
+    payload(access_certificate, issuer.name)
+  end
+
+  def payload(access_certificate, issuer_name) do
     access_certificate
-    |> Map.put(:issuer, issuer.name)
+    |> Map.put(:issuer, issuer_name)
     |> compact()
   end
 
