@@ -94,7 +94,7 @@
         {Credo.Check.Refactor.DoubleBooleanNegation},
         {Credo.Check.Refactor.CondStatements},
         {Credo.Check.Refactor.CyclomaticComplexity},
-        {Credo.Check.Refactor.FunctionArity},
+        {Credo.Check.Refactor.FunctionArity, max_arity: 8},
         {Credo.Check.Refactor.LongQuoteBlocks},
         {Credo.Check.Refactor.MatchInCondition},
         {Credo.Check.Refactor.NegatedConditionsInUnless},

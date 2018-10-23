@@ -21,7 +21,7 @@ defmodule HmCrypto.Issuer do
   defstruct name: nil, private_key: nil
 
   @type name :: <<_::32>>
-  @type t :: %{name: name, private_key: HmCrypto.Crypto.private_key()}
+  @type t :: %HmCrypto.Issuer{name: name, private_key: HmCrypto.Crypto.private_key()}
 
   alias __MODULE__
 
