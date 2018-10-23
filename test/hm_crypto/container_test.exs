@@ -47,6 +47,31 @@ defmodule HmCrypto.ContainerTest do
     end
   end
 
+  property "symmetric enclosing/disclosing a command with public key" do
+    forall data <- [
+             device_serial: serial_number(),
+             device_key_pair: key_pair(),
+             nonce: serial_number(),
+             command: binary()
+           ] do
+      private_key = elem(data[:device_key_pair], 1)
+
+      contained_msg =
+        HmCrypto.Container.enclose(
+          data[:command],
+          data[:device_serial],
+          private_key,
+          sample_public_key(),
+          data[:nonce]
+        )
+
+      case HmCrypto.Container.disclose(contained_msg, private_key, sample_public_key()) do
+        {:ok, cmd} -> cmd == data[:command]
+        _ -> false
+      end
+    end
+  end
+
   def serial_number do
     let _ <- any() do
       :crypto.strong_rand_bytes(9)
@@ -57,6 +82,12 @@ defmodule HmCrypto.ContainerTest do
     let _ <- any() do
       HmCrypto.Crypto.generate_key()
     end
+  end
+
+  def sample_public_key do
+    Base.decode64!(
+      "npm0SD3UekJJLTS8nu5TBKUmcqDwjolao1UgGntXgs5hxdZIXu77up96IpwKUIyDVWjtamZwyaqk6AGdDC9SAQ=="
+    )
   end
 
   def sample_access_cert do
