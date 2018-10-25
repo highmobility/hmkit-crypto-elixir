@@ -37,11 +37,22 @@ defmodule HmCrypto.Container do
         }
 
   @type disclose_error ::
-          :invalid_hmac | :invalid_secure_command | :invalid_secure_command | :unencrypted_command
+          :invalid_hmac
+          | :invalid_secure_command
+          | :unencrypted_command
+          | :internal_error
+          | :invalid_data
+          | :timeout
   @type nonce :: <<_::72>>
   @type command :: binary
   @type secure_command :: binary
+  @type unsecure_command :: binary
   @type serial_number :: binary
+
+  @errror_internal_error <<0x00, 0x01>>
+  @error_invalid_data <<0x01, 0x04>>
+  @error_timeout <<0x00, 0x09>>
+  @error_invalid_hmac <<0x36, 0x08>>
 
   @doc """
   Creates a secure container command. It also escapes [0x00, 0xFE, 0xFF] with [orignal, 0xFE].
@@ -72,6 +83,43 @@ defmodule HmCrypto.Container do
   def enclose(command, serial_number, private_key, access_certificate, nonce) do
     data = enclose_command(command, private_key, access_certificate, nonce)
     <<0x00>> <> add_paddings(serial_number <> nonce <> <<0x01>> <> data) <> <<0xFF>>
+  end
+
+  @doc """
+  Create an Error container.
+
+      iex> error_cmd = <<0x02, 0x36, 0x08>>
+      iex> serial_number = <<93, 151, 197, 254, 242, 65, 186, 175, 170>>
+      iex> nonce = <<0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08>>
+      iex> error_container = HmCrypto.Container.enclose_error(error_cmd, serial_number, nonce)
+      iex> HmCrypto.Container.disclose_error(error_container)
+      <<0x02,0x36, 0x08>>
+  """
+  @spec enclose_error(
+          command | disclose_error,
+          serial_number,
+          nonce
+        ) :: unsecure_command
+  def enclose_error(command, serial_number, nonce) when is_binary(command) do
+    <<0x00>> <> add_paddings(serial_number <> nonce <> <<0x00>> <> command) <> <<0xFF>>
+  end
+
+  def enclose_error(:internal_error, serial_number, nonce) do
+    enclose_error(<<0x02>> <> @errror_internal_error, serial_number, nonce)
+  end
+
+  def enclose_error(:timeout, serial_number, nonce) do
+    enclose_error(<<0x02>> <> @error_timeout, serial_number, nonce)
+  end
+
+  def enclose_error(error_atom, serial_number, nonce)
+      when error_atom in [:invalid_data, :unencrypted_command] do
+    enclose_error(<<0x02>> <> @error_invalid_data, serial_number, nonce)
+  end
+
+  def enclose_error(error_atom, serial_number, nonce)
+      when error_atom in [:invalid_hmac, :invalid_secure_command] do
+    enclose_error(<<0x02>> <> @error_invalid_hmac, serial_number, nonce)
   end
 
   @doc """
