@@ -66,7 +66,7 @@ defmodule HmCrypto.Container do
           command,
           serial_number,
           Crypto.private_key(),
-          HmCrypto.AccessCertificate.access_certificate_binary(),
+          HmCrypto.AccessCertificate.access_certificate_binary() | HmCrypto.Crypto.public_key(),
           nonce
         ) :: secure_command
   def enclose(command, serial_number, private_key, access_certificate, nonce) do
@@ -88,7 +88,7 @@ defmodule HmCrypto.Container do
   @spec disclose(
           secure_command,
           Crypto.private_key(),
-          HmCrypto.AccessCertificate.access_certificate_binary()
+          HmCrypto.AccessCertificate.access_certificate_binary() | HmCrypto.Crypto.public_key()
         ) :: {:ok, command} | {:error, disclose_error}
   def disclose(container_data, private_key, access_certificate) do
     %{command: command, encrypted_flag: encrypted_flag?, target_serial: _, nonce: nonce} =
@@ -201,7 +201,7 @@ defmodule HmCrypto.Container do
   @spec enclose_command(
           binary,
           Crypto.private_key(),
-          HmCrypto.AccessCertificate.access_certificate_binary(),
+          HmCrypto.AccessCertificate.access_certificate_binary() | HmCrypto.Crypto.public_key(),
           nonce()
         ) :: binary
   def enclose_command(command, private_key, access_certificate, nonce) do
@@ -227,7 +227,7 @@ defmodule HmCrypto.Container do
   @spec disclose_command(
           binary,
           Crypto.private_key(),
-          HmCrypto.AccessCertificate.access_certificate_binary(),
+          HmCrypto.AccessCertificate.access_certificate_binary() | HmCrypto.Crypto.public_key(),
           nonce()
         ) :: {:ok, binary} | {:error, disclose_error}
   def disclose_command(encrypted_command, private_key, access_certificate, nonce) do

@@ -87,10 +87,17 @@ defmodule HmCrypto.Crypto do
       iex> HmCrypto.Crypto.compute_key(Base.decode64!(private_key), Base.decode64!(access_cert_v1)) |> Base.encode64
       "gPK2rZLowBWK1TE+Vm1JJZanwg42yynT3wOH9uX2av8="
   """
-  @spec compute_key(private_key, HmCrypto.AccessCertificate.access_certificate_binary()) :: binary
-  def compute_key(private_key, access_cert) do
-    priv = {:ECPrivateKey, 1, private_key, {:namedCurve, :secp256r1}, <<>>}
+  @spec compute_key(
+          private_key,
+          HmCrypto.AccessCertificate.access_certificate_binary() | HmCrypto.Crypto.public_key()
+        ) :: binary
+  def compute_key(private_key, public_key) when byte_size(public_key) == 64 do
+    private_key = {:ECPrivateKey, 1, private_key, {:namedCurve, :secp256r1}, <<>>}
+    public_key = <<0x04>> <> public_key
+    :public_key.compute_key({:ECPoint, public_key}, private_key)
+  end
 
+  def compute_key(private_key, access_cert) do
     pub =
       case access_cert do
         <<0x01, _beginning::binary-size(22), public_key::binary-size(64), _dates::binary-size(10),
@@ -102,8 +109,7 @@ defmodule HmCrypto.Crypto do
           public_key
       end
 
-    pub = <<0x04>> <> pub
-    :public_key.compute_key({:ECPoint, pub}, priv)
+    compute_key(private_key, pub)
   end
 
   @doc """
