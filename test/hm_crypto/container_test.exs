@@ -50,6 +50,15 @@ defmodule HmCrypto.ContainerTest do
 
       assert Container.disclose_error(container_error) == <<0x2, 0x36, 0x08>>
     end
+
+    test "disclose an error" do
+      serial_number = <<0x0, 0xFF, 197, 254, 242, 65, 186, 175, 170>>
+      container_error = Container.enclose_error(:invalid_hmac, serial_number, @nonce)
+
+      assert Container.destruct_container(container_error)
+
+      assert Container.disclose_error(container_error) == <<0x2, 0x36, 0x08>>
+    end
   end
 
   property "symmetric enclosing/disclosing a command" do
