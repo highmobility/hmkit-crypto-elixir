@@ -21,6 +21,36 @@ defmodule HmCrypto.ContainerTest do
   use ExUnit.Case
   use PropCheck
   doctest HmCrypto.Container
+  alias HmCrypto.Container
+
+  @serial_number <<93, 151, 197, 254, 242, 65, 186, 175, 170>>
+  @nonce <<0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08>>
+
+  describe "error container" do
+    test "internal_error" do
+      container_error = Container.enclose_error(:internal_error, @serial_number, @nonce)
+
+      assert Container.disclose_error(container_error) == <<0x2, 0x00, 0x01>>
+    end
+
+    test "timeout" do
+      container_error = Container.enclose_error(:timeout, @serial_number, @nonce)
+
+      assert Container.disclose_error(container_error) == <<0x2, 0x00, 0x09>>
+    end
+
+    test "invalid_data" do
+      container_error = Container.enclose_error(:invalid_data, @serial_number, @nonce)
+
+      assert Container.disclose_error(container_error) == <<0x2, 0x01, 0x04>>
+    end
+
+    test "invalid_hmac" do
+      container_error = Container.enclose_error(:invalid_hmac, @serial_number, @nonce)
+
+      assert Container.disclose_error(container_error) == <<0x2, 0x36, 0x08>>
+    end
+  end
 
   property "symmetric enclosing/disclosing a command" do
     forall data <- [
