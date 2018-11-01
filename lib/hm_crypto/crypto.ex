@@ -217,8 +217,7 @@ defmodule HmCrypto.Crypto do
     pem_entry =
       :public_key.pem_entry_encode(
         :SubjectPublicKeyInfo,
-        {{:ECPoint, <<4>> <> public_key},
-         {:namedCurve, :pubkey_cert_records.namedCurves(:secp256r1)}}
+        {{:ECPoint, public_key}, {:namedCurve, :pubkey_cert_records.namedCurves(:secp256r1)}}
       )
 
     {:ok, :public_key.pem_encode([pem_entry])}
@@ -246,7 +245,7 @@ defmodule HmCrypto.Crypto do
     {:ok, private_key}
   end
 
-  defp extract_binary_from_pem({{:ECPoint, <<0x4, 0x04, public_key::binary-size(64)>>}, _}) do
+  defp extract_binary_from_pem({{:ECPoint, <<0x04, public_key::binary-size(64)>>}, _}) do
     {:ok, public_key}
   end
 

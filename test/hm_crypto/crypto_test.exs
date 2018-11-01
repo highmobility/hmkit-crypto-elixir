@@ -28,12 +28,12 @@ defmodule HmCrypto.CryptoTest do
                         144, 5, 86, 128, 1, 100, 249, 191, 38, 246, 180, 131, 205, 254, 25, 193,
                         252>>
 
-  @public_key_binary <<134, 137, 240, 89, 153, 200, 168, 69, 241, 78, 123, 101, 246, 137, 86, 38,
-                       212, 82, 171, 95, 195, 172, 11, 228, 242, 187, 38, 103, 215, 197, 150, 113,
-                       83, 46, 73, 215, 5, 248, 14, 221, 22, 146, 30, 204, 26, 80, 134, 72, 158,
-                       180, 236, 177, 184, 141, 241, 104, 82, 157, 151, 62, 152, 246, 237, 80>>
+  @public_key_binary <<51, 220, 123, 206, 72, 142, 102, 85, 241, 239, 103, 148, 199, 133, 178, 75,
+                       55, 232, 227, 210, 131, 29, 171, 62, 121, 39, 118, 240, 197, 118, 253, 203,
+                       42, 152, 176, 11, 155, 198, 180, 225, 250, 121, 236, 170, 96, 80, 19, 223,
+                       215, 106, 65, 124, 175, 135, 8, 54, 199, 6, 116, 80, 155, 112, 235, 87>>
 
-  @public_key_pem "-----BEGIN PUBLIC KEY-----\nMFowEwYHKoZIzj0CAQYIKoZIzj0DAQcDQwAEBIaJ8FmZyKhF8U57ZfaJVibUUqtf\nw6wL5PK7JmfXxZZxUy5J1wX4Dt0Wkh7MGlCGSJ607LG4jfFoUp2XPpj27VA=\n-----END PUBLIC KEY-----\n\n"
+  @public_key_pem "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEM9x7zkiOZlXx72eUx4WySzfo49KD\nHas+eSd28MV2/csqmLALm8a04fp57KpgUBPf12pBfK+HCDbHBnRQm3DrVw==\n-----END PUBLIC KEY-----\n\n"
 
   describe "to_pem" do
     test "converts binary private key to pem" do
@@ -63,6 +63,7 @@ defmodule HmCrypto.CryptoTest do
   describe "symmetric" do
     test "converts public key from bin to pem and reverse" do
       {public_key_binary, _} = Crypto.generate_key()
+
       assert {:ok, pem_key} = Crypto.to_pem(public_key_binary)
       assert {:ok, binary_key} = Crypto.from_pem(pem_key)
       assert public_key_binary == binary_key
