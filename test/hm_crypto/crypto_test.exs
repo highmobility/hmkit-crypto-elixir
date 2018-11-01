@@ -17,7 +17,7 @@
 # Please inquire about commercial licensing options at
 # licensing@high-mobility.com
 
-defmodule HmCryptoTest do
+defmodule HmCrypto.CryptoTest do
   use ExUnit.Case
   doctest HmCrypto.Crypto
 end
