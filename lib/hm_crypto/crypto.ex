@@ -192,6 +192,68 @@ defmodule HmCrypto.Crypto do
     ])
   end
 
+  @doc """
+  Converts public key or private key to pem
+  """
+  @spec to_pem(public_key | private_key) :: {:ok, String.t()} | {:error, atom}
+  def to_pem(private_key) when byte_size(private_key) == 32 do
+    pem_entry =
+      :public_key.pem_entry_encode(
+        :PrivateKeyInfo,
+        {:ECPrivateKey, 1, private_key,
+         {:namedCurve, :pubkey_cert_records.namedCurves(:secp256r1)}, <<>>}
+      )
+
+    {:ok, :public_key.pem_encode([pem_entry])}
+  end
+
+  def to_pem(public_key) when byte_size(public_key) == 64 do
+    public_key
+    |> extended_public_key
+    |> to_pem
+  end
+
+  def to_pem(public_key) when byte_size(public_key) == 65 do
+    pem_entry =
+      :public_key.pem_entry_encode(
+        :SubjectPublicKeyInfo,
+        {{:ECPoint, <<4>> <> public_key},
+         {:namedCurve, :pubkey_cert_records.namedCurves(:secp256r1)}}
+      )
+
+    {:ok, :public_key.pem_encode([pem_entry])}
+  end
+
+  @doc """
+  Converts public key or private key pem to its binary value
+  """
+  @spec from_pem(String.t()) :: {:ok, private_key | public_key} | {:error, atom}
+  def from_pem(pem) do
+    with [pem_decoded] <- :public_key.pem_decode(pem),
+         {:ok, binary_key} <- extract_binary_from_pem(:public_key.pem_entry_decode(pem_decoded)) do
+      {:ok, binary_key}
+    else
+      _ ->
+        {:error, :invalid_pem}
+    end
+  end
+
+  defp extended_public_key(public_key) do
+    <<0x04>> <> public_key
+  end
+
+  defp extract_binary_from_pem({:ECPrivateKey, _, private_key, _, _}) do
+    {:ok, private_key}
+  end
+
+  defp extract_binary_from_pem({{:ECPoint, <<0x4, 0x04, public_key::binary-size(64)>>}, _}) do
+    {:ok, public_key}
+  end
+
+  defp extract_binary_from_pem(_) do
+    {:error, :unknown_key}
+  end
+
   defp fill_signature(<<vr::binary-size(32), vs::binary-size(32)>>) do
     vr = String.trim_leading(vr, <<0x00>>)
     vs = String.trim_leading(vs, <<0x00>>)
