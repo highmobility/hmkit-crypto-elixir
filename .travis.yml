@@ -1,9 +1,9 @@
 sudo: false
 language: elixir
 otp_release:
-  - 20.1
+  - 21.1
 elixir:
-  - 1.6.0
+  - 1.7.3
 cache:
   directories:
     - /home/travis/.mix/
