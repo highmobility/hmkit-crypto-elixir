@@ -1,15 +1,15 @@
 sudo: false
 language: elixir
 otp_release:
-  - 20.1
+  - 21.1
 elixir:
-  - 1.6.0
+  - 1.7.3
 cache:
   directories:
     - /home/travis/.mix/
 script:
   - mix test
-  - MIX_ENV=test mix dialyzer --halt-exit-status
+  - MIX_ENV=test travis_wait 30 mix dialyzer --halt-exit-status
   - mix credo
   - mix format --check-formatted
 
