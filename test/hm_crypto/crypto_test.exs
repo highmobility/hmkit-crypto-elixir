@@ -19,6 +19,7 @@
 
 defmodule HmCrypto.CryptoTest do
   use ExUnit.Case
+  use PropCheck
   doctest HmCrypto.Crypto
   alias HmCrypto.Crypto
 
@@ -74,6 +75,21 @@ defmodule HmCrypto.CryptoTest do
       assert {:ok, pem_key} = Crypto.to_pem(private_key_binary)
       assert {:ok, binary_key} = Crypto.from_pem(pem_key)
       assert private_key_binary == binary_key
+    end
+  end
+
+  property "generate_key/0" do
+    forall data <- [key: key_pair()] do
+      {public_key, private_key} = data[:key]
+
+      assert byte_size(public_key) == 64
+      assert byte_size(private_key) == 32
+    end
+  end
+
+  def key_pair do
+    let _ <- any() do
+      HmCrypto.Crypto.generate_key()
     end
   end
 end
