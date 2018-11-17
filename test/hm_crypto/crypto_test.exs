@@ -23,7 +23,7 @@ defmodule HmCrypto.CryptoTest do
   doctest HmCrypto.Crypto
   alias HmCrypto.Crypto
 
-  @private_key_pem "-----BEGIN PRIVATE KEY-----\nMEYCAQAwEwYHKoZIzj0CAQYIKoZIzj0DAQcELDAqAgEBBCCzSWRx8hp7/r7GhTFu\nR/OQBVaAAWT5vyb2tIPN/hnB/KEDAwEA\n-----END PRIVATE KEY-----\n\n"
+  @private_key_pem "-----BEGIN PRIVATE KEY-----\nMIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgs0lkcfIae/6+xoUx\nbkfzkAVWgAFk+b8m9rSDzf4ZwfyhRANCAAQz3HvOSI5mVfHvZ5THhbJLN+jj0oMd\nqz55J3bwxXb9yyqYsAubxrTh+nnsqmBQE9/XakF8r4cINscGdFCbcOtX\n-----END PRIVATE KEY-----\n\n"
 
   @private_key_binary <<179, 73, 100, 113, 242, 26, 123, 254, 190, 198, 133, 49, 110, 71, 243,
                         144, 5, 86, 128, 1, 100, 249, 191, 38, 246, 180, 131, 205, 254, 25, 193,
@@ -38,7 +38,7 @@ defmodule HmCrypto.CryptoTest do
 
   describe "to_pem" do
     test "converts binary private key to pem" do
-      assert {:ok, pem} = Crypto.to_pem(@private_key_binary)
+      assert {:ok, pem} = Crypto.to_pem(@private_key_binary, @public_key_binary)
 
       assert @private_key_pem == pem
     end
@@ -71,8 +71,8 @@ defmodule HmCrypto.CryptoTest do
     end
 
     test "converts private key from bin to pem and reverse" do
-      {_, private_key_binary} = Crypto.generate_key()
-      assert {:ok, pem_key} = Crypto.to_pem(private_key_binary)
+      {public_key_binary, private_key_binary} = Crypto.generate_key()
+      assert {:ok, pem_key} = Crypto.to_pem(private_key_binary, public_key_binary)
       assert {:ok, binary_key} = Crypto.from_pem(pem_key)
       assert private_key_binary == binary_key
     end
