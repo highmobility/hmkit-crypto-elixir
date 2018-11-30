@@ -199,20 +199,13 @@ defmodule HmCrypto.Crypto do
   end
 
   @doc """
-  Converts public key or private key to pem
+  Converts pair of keys or public key to pem
+
+      {public_key, private_key} = Crypto.generate_key()
+      Crypto.to_pem(public_key_binary)
+      Crypto.to_pem(private_key, public_key_binary)
   """
-  @spec to_pem(public_key | private_key) :: {:ok, String.t()} | {:error, atom}
-  def to_pem(private_key) when byte_size(private_key) == 32 do
-    pem_entry =
-      :public_key.pem_entry_encode(
-        :PrivateKeyInfo,
-        {:ECPrivateKey, 1, private_key,
-         {:namedCurve, :pubkey_cert_records.namedCurves(:secp256r1)}, <<>>}
-      )
-
-    {:ok, :public_key.pem_encode([pem_entry])}
-  end
-
+  @spec to_pem(public_key) :: {:ok, String.t()} | {:error, atom}
   def to_pem(public_key) when byte_size(public_key) == 64 do
     public_key
     |> extended_public_key
@@ -224,6 +217,23 @@ defmodule HmCrypto.Crypto do
       :public_key.pem_entry_encode(
         :SubjectPublicKeyInfo,
         {{:ECPoint, public_key}, {:namedCurve, :pubkey_cert_records.namedCurves(:secp256r1)}}
+      )
+
+    {:ok, :public_key.pem_encode([pem_entry])}
+  end
+
+  def to_pem(private_key, public_key)
+      when byte_size(private_key) == 32 and byte_size(public_key) == 64 do
+    to_pem(private_key, <<0x04>> <> public_key)
+  end
+
+  def to_pem(private_key, public_key)
+      when byte_size(private_key) == 32 and byte_size(public_key) == 65 do
+    pem_entry =
+      :public_key.pem_entry_encode(
+        :PrivateKeyInfo,
+        {:ECPrivateKey, 1, private_key,
+         {:namedCurve, :pubkey_cert_records.namedCurves(:secp256r1)}, public_key}
       )
 
     {:ok, :public_key.pem_encode([pem_entry])}
