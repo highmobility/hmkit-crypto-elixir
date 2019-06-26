@@ -59,6 +59,16 @@ defmodule HmCrypto.ContainerTest do
 
       assert Container.disclose_error(container_error) == {:ok, <<0x2, 0x36, 0x08>>}
     end
+
+    test "returns error when Error container is encrypted" do
+      encrypted_flag = 1
+
+      container_error =
+        <<0, 93, 151, 197, 254, 254, 242, 65, 186, 175, 170, 254, 0, 1, 2, 3, 4, 5, 6, 7, 8, 254,
+          encrypted_flag, 2, 54, 8, 255>>
+
+      assert Container.disclose_error(container_error) == {:error, :error_message_is_encrypted}
+    end
   end
 
   describe "destruct_container/1" do
