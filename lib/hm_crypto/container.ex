@@ -36,6 +36,11 @@ defmodule HmCrypto.Container do
           encrypted_flag: integer
         }
 
+  @type container_parser_error ::
+          :short_container
+          | :invalid_container_wrapper
+          | :invalid_container_property
+
   @type disclose_error ::
           :invalid_hmac
           | :invalid_secure_command
@@ -93,7 +98,7 @@ defmodule HmCrypto.Container do
       iex> nonce = <<0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08>>
       iex> error_container = HmCrypto.Container.enclose_error(error_cmd, serial_number, nonce)
       iex> HmCrypto.Container.disclose_error(error_container)
-      <<0x02,0x36, 0x08>>
+      {:ok, <<0x02,0x36, 0x08>>}
   """
   @spec enclose_error(
           command | disclose_error,
@@ -137,15 +142,14 @@ defmodule HmCrypto.Container do
           secure_command,
           Crypto.private_key(),
           HmCrypto.AccessCertificate.access_certificate_binary() | HmCrypto.Crypto.public_key()
-        ) :: {:ok, command} | {:error, disclose_error}
+        ) :: {:ok, command} | {:error, disclose_error} | {:error, container_parser_error}
   def disclose(container_data, private_key, access_certificate) do
-    %{command: command, encrypted_flag: encrypted_flag?, target_serial: _, nonce: nonce} =
-      destruct_container(container_data)
-
-    if encrypted_flag? == 0x00 do
-      {:error, :unencrypted_command}
-    else
-      disclose_command(command, private_key, access_certificate, nonce)
+    with {:ok, container} <- destruct_container(container_data) do
+      if container.encrypted_flag == 0x00 do
+        {:error, :unencrypted_command}
+      else
+        disclose_command(container.command, private_key, access_certificate, container.nonce)
+      end
     end
   end
 
@@ -160,11 +164,19 @@ defmodule HmCrypto.Container do
                                   0xFE, 0x0, 0xFE, 0x0, 0xFE, 0x0, 0xFE, 0x0, 0xFE, 0x0, 0xFE, 0x0, 0xFE, 0x0, \
                                   0xFE, 0x0, 0xFE, 0x0, 0x2, 0xFE, 0x0, 0xFE, 0x0, 0xFF>>
       iex> HmCrypto.Container.disclose_error(unencrypted_command)
-      <<0x02, 0x00, 0x00>>
+      {:ok, <<0x02, 0x00, 0x00>>}
   """
+  @spec disclose_error(binary) ::
+          {:error, :error_message_is_encrypted} | {:error, container_parser_error}
   def disclose_error(container_data) do
-    %{command: command, encrypted_flag: 0x00} = destruct_container(container_data)
-    command
+    with {:ok, %{command: command, encrypted_flag: encrypted_flag}} <-
+           destruct_container(container_data) do
+      if encrypted_flag == 0x00 do
+        {:ok, command}
+      else
+        {:error, :error_message_is_encrypted}
+      end
+    end
   end
 
   @doc """
@@ -175,29 +187,50 @@ defmodule HmCrypto.Container do
       iex> access_cert = "985tN4j0KNRqnpm0SD3UekJJLTS8nu5TBKUmcqDwjolao1UgGntXgs5hxdZIXu77up96IpwKUIyDVWjtamZwyaqk6AGdDC9SARqs41rSMcXruBEIAws1EQkCCzUHEAf//f/v/6+MpCSOvbhpyQpDnRYi89It6XqEm9TAevyFu3GrCLIbBWNk1rwuRmOL4KRhfSnMCNkhsHXCUvkEBU4SzUgcEvg="
       iex> nonce = :crypto.strong_rand_bytes(9)
       iex> contained_msg = HmCrypto.Container.enclose(<<0x00>>, serial_number, Base.decode64!(private_key), Base.decode64!(access_cert), nonce)
-      iex> %HmCrypto.Container{nonce: destruct_nonce, encrypted_flag: destruct_encrypted_flag , target_serial: destruct_serial } = HmCrypto.Container.destruct_container(contained_msg)
-      iex> destruct_nonce == nonce
+      iex> {:ok, container} = HmCrypto.Container.destruct_container(contained_msg)
+      iex> container.nonce == nonce
       true
-      iex> destruct_encrypted_flag == 1
+      iex> container.encrypted_flag == 1
       true
-      iex> destruct_serial == serial_number
+      iex> container.target_serial == serial_number
       true
   """
-  @spec destruct_container(binary) :: t
+  @spec destruct_container(binary) :: {:ok, t} | {:error, container_parser_error}
   def destruct_container(container_data) when byte_size(container_data) > 21 do
     inside_size = byte_size(container_data) - 2
-    <<0x00, inside_data::binary-size(inside_size), 0xFF>> = container_data
-    inside_data = remove_paddings(inside_data)
 
-    <<target_serial::binary-size(9), nonce::binary-size(9), encrypted_flag, command::binary>> =
-      inside_data
+    with {:ok, inside_data} <- extract_inside_data(container_data, inside_size),
+         inside_data <- remove_paddings(inside_data),
+         {:ok, {target_serial, nonce, encrypted_flag, command}} <- extract_prop(inside_data) do
+      {:ok,
+       %__MODULE__{
+         target_serial: target_serial,
+         nonce: nonce,
+         command: command,
+         encrypted_flag: encrypted_flag
+       }}
+    end
+  end
 
-    %__MODULE__{
-      target_serial: target_serial,
-      nonce: nonce,
-      command: command,
-      encrypted_flag: encrypted_flag
-    }
+  def destruct_container(_) do
+    {:error, :short_container}
+  end
+
+  defp extract_inside_data(container_data, inside_size) do
+    case container_data do
+      <<0x00, inside_data::binary-size(inside_size), 0xFF>> -> {:ok, inside_data}
+      _ -> {:error, :invalid_container_wrapper}
+    end
+  end
+
+  defp extract_prop(inside_data) do
+    case inside_data do
+      <<target_serial::binary-size(9), nonce::binary-size(9), encrypted_flag, command::binary>> ->
+        {:ok, {target_serial, nonce, encrypted_flag, command}}
+
+      _ ->
+        {:error, :invalid_container_property}
+    end
   end
 
   defp add_paddings(<<>>), do: <<>>
