@@ -145,8 +145,7 @@ defmodule HmCrypto.Container do
         ) :: {:ok, command} | {:error, disclose_error} | {:error, container_parser_error}
   def disclose(container_data, private_key, access_certificate) do
     with {:ok, container} <- destruct_container(container_data),
-         {:ok, :encrypted} <-
-           encrypted?(container.encrypted_flag) do
+         {:ok, :encrypted} <- encrypted?(container.encrypted_flag) do
       disclose_command(container.command, private_key, access_certificate, container.nonce)
     else
       {:ok, :not_encrypted} ->
