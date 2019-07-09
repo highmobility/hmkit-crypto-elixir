@@ -144,12 +144,16 @@ defmodule HmCrypto.Container do
           HmCrypto.AccessCertificate.access_certificate_binary() | HmCrypto.Crypto.public_key()
         ) :: {:ok, command} | {:error, disclose_error} | {:error, container_parser_error}
   def disclose(container_data, private_key, access_certificate) do
-    with {:ok, container} <- destruct_container(container_data) do
-      if container.encrypted_flag == 0x00 do
+    with {:ok, container} <- destruct_container(container_data),
+         {:ok, :encrypted} <-
+           encrypted?(container.encrypted_flag) do
+      disclose_command(container.command, private_key, access_certificate, container.nonce)
+    else
+      {:ok, :not_encrypted} ->
         {:error, :unencrypted_command}
-      else
-        disclose_command(container.command, private_key, access_certificate, container.nonce)
-      end
+
+      error ->
+        error
     end
   end
 
@@ -170,12 +174,12 @@ defmodule HmCrypto.Container do
           {:error, :error_message_is_encrypted} | {:error, container_parser_error}
   def disclose_error(container_data) do
     with {:ok, %{command: command, encrypted_flag: encrypted_flag}} <-
-           destruct_container(container_data) do
-      if encrypted_flag == 0x00 do
-        {:ok, command}
-      else
-        {:error, :error_message_is_encrypted}
-      end
+           destruct_container(container_data),
+         {:ok, :not_encrypted} <- encrypted?(encrypted_flag) do
+      {:ok, command}
+    else
+      {:ok, :encrypted} -> {:error, :error_message_is_encrypted}
+      error -> error
     end
   end
 
@@ -367,4 +371,7 @@ defmodule HmCrypto.Container do
     |> Enum.map(fn {x, y} -> :erlang.bxor(x, y) end)
     |> :binary.list_to_bin()
   end
+
+  defp encrypted?(0x00), do: {:ok, :not_encrypted}
+  defp encrypted?(_), do: {:ok, :encrypted}
 end
