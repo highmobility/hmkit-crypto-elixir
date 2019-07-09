@@ -30,34 +30,67 @@ defmodule HmCrypto.ContainerTest do
     test "internal_error" do
       container_error = Container.enclose_error(:internal_error, @serial_number, @nonce)
 
-      assert Container.disclose_error(container_error) == <<0x2, 0x00, 0x01>>
+      assert Container.disclose_error(container_error) == {:ok, <<0x2, 0x00, 0x01>>}
     end
 
     test "timeout" do
       container_error = Container.enclose_error(:timeout, @serial_number, @nonce)
 
-      assert Container.disclose_error(container_error) == <<0x2, 0x00, 0x09>>
+      assert Container.disclose_error(container_error) == {:ok, <<0x2, 0x00, 0x09>>}
     end
 
     test "invalid_data" do
       container_error = Container.enclose_error(:invalid_data, @serial_number, @nonce)
 
-      assert Container.disclose_error(container_error) == <<0x2, 0x01, 0x04>>
+      assert Container.disclose_error(container_error) == {:ok, <<0x2, 0x01, 0x04>>}
     end
 
     test "invalid_hmac" do
       container_error = Container.enclose_error(:invalid_hmac, @serial_number, @nonce)
 
-      assert Container.disclose_error(container_error) == <<0x2, 0x36, 0x08>>
+      assert Container.disclose_error(container_error) == {:ok, <<0x2, 0x36, 0x08>>}
     end
 
     test "disclose an error" do
       serial_number = <<0x0, 0xFF, 197, 254, 242, 65, 186, 175, 170>>
       container_error = Container.enclose_error(:invalid_hmac, serial_number, @nonce)
 
-      assert Container.destruct_container(container_error)
+      assert {:ok, _} = Container.destruct_container(container_error)
 
-      assert Container.disclose_error(container_error) == <<0x2, 0x36, 0x08>>
+      assert Container.disclose_error(container_error) == {:ok, <<0x2, 0x36, 0x08>>}
+    end
+
+    test "returns error when Error container is encrypted" do
+      encrypted_flag = 1
+
+      container_error =
+        <<0, 93, 151, 197, 254, 254, 242, 65, 186, 175, 170, 254, 0, 1, 2, 3, 4, 5, 6, 7, 8, 254,
+          encrypted_flag, 2, 54, 8, 255>>
+
+      assert Container.disclose_error(container_error) == {:error, :error_message_is_encrypted}
+    end
+  end
+
+  describe "destruct_container/1" do
+    test "returns error when container is short" do
+      assert Container.destruct_container(<<>>) == {:error, :short_container}
+    end
+
+    test "returns error when container is invalid" do
+      invalid_container = String.duplicate(<<0x00>>, 30)
+
+      assert Container.destruct_container(invalid_container) ==
+               {:error, :invalid_container_wrapper}
+    end
+
+    test "returns error when inside data of container is invalid" do
+      serial_number = String.duplicate(<<0xFE>>, 18)
+      nonce = String.duplicate(<<0x01>>, 9)
+
+      invalid_container = <<0x0, serial_number::binary, nonce::binary, 0xFF>>
+
+      assert Container.destruct_container(invalid_container) ==
+               {:error, :invalid_container_property}
     end
   end
 
