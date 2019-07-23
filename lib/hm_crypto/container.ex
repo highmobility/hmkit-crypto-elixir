@@ -50,6 +50,7 @@ defmodule HmCrypto.Container do
           | :timeout
   @type nonce :: <<_::72>>
   @type command :: binary
+  @type data :: binary
   @type secure_command :: binary
   @type unsecure_command :: binary
   @type serial_number :: binary
@@ -58,6 +59,22 @@ defmodule HmCrypto.Container do
   @error_invalid_data <<0x01, 0x04>>
   @error_timeout <<0x00, 0x09>>
   @error_invalid_hmac <<0x36, 0x08>>
+
+  @doc """
+  Encrypts/Decrypts the data
+  """
+  @spec encrypt_decrypt(data, Crypto.private_key(), Crypto.public_key(), nonce) :: binary
+  def encrypt_decrypt(data, my_private_key, other_public_key, nonce) do
+    session_key =
+      my_private_key
+      |> Crypto.compute_key(other_public_key)
+      |> Crypto.hmac(nonce)
+
+    :aes_ecb
+    |> :crypto.block_encrypt(encryption_key(session_key), encryption_iv(nonce))
+    |> duplicate_cipher(byte_size(data))
+    |> xor(data)
+  end
 
   @doc """
   Creates a secure container command. It also escapes [0x00, 0xFE, 0xFF] with [orignal, 0xFE].
@@ -299,10 +316,7 @@ defmodule HmCrypto.Container do
     command_container_bytes =
       command_with_padding <> Crypto.hmac(session_key, command_with_padding)
 
-    :aes_ecb
-    |> :crypto.block_encrypt(encryption_key(session_key), encryption_iv(nonce))
-    |> duplicate_cipher(byte_size(command_container_bytes))
-    |> xor(command_container_bytes)
+    encrypt_decrypt(command_container_bytes, private_key, access_certificate, nonce)
   end
 
   @doc """
@@ -320,10 +334,8 @@ defmodule HmCrypto.Container do
       |> Crypto.compute_key(access_certificate)
       |> Crypto.hmac(nonce)
 
-    :aes_ecb
-    |> :crypto.block_encrypt(encryption_key(session_key), encryption_iv(nonce))
-    |> duplicate_cipher(byte_size(encrypted_command))
-    |> xor(encrypted_command)
+    encrypted_command
+    |> encrypt_decrypt(private_key, access_certificate, nonce)
     |> validate_secure_command(session_key)
   end
 

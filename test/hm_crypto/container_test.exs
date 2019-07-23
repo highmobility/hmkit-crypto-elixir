@@ -94,6 +94,42 @@ defmodule HmCrypto.ContainerTest do
     end
   end
 
+  describe "encrypt_decrypt/3" do
+    property "symmetric encrypt_decrypt a binary data" do
+      forall data <- [
+               alice_key_pair: key_pair(),
+               bob_key_pair: key_pair(),
+               nonce: serial_number(),
+               raw_data: binary()
+             ] do
+        private_key = elem(data[:alice_key_pair], 1)
+
+        public_key = elem(data[:bob_key_pair], 0)
+
+        nonce = data[:nonce]
+        raw_data = data[:raw_data]
+
+        encrypted_data =
+          HmCrypto.Container.encrypt_decrypt(
+            raw_data,
+            private_key,
+            public_key,
+            nonce
+          )
+
+        decrypted_data =
+          HmCrypto.Container.encrypt_decrypt(
+            encrypted_data,
+            private_key,
+            public_key,
+            nonce
+          )
+
+        assert decrypted_data == raw_data
+      end
+    end
+  end
+
   property "symmetric enclosing/disclosing a command" do
     forall data <- [
              device_serial: serial_number(),
