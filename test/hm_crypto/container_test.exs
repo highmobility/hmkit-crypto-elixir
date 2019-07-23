@@ -145,10 +145,11 @@ defmodule HmCrypto.ContainerTest do
           data[:device_serial],
           private_key,
           sample_access_cert(),
-          data[:nonce]
+          data[:nonce],
+          :v1
         )
 
-      case HmCrypto.Container.disclose(contained_msg, private_key, sample_access_cert()) do
+      case HmCrypto.Container.disclose(contained_msg, private_key, sample_access_cert(), :v1) do
         {:ok, cmd} -> cmd == data[:command]
         _ -> false
       end
@@ -170,10 +171,11 @@ defmodule HmCrypto.ContainerTest do
           data[:device_serial],
           private_key,
           sample_public_key(),
-          data[:nonce]
+          data[:nonce],
+          :v1
         )
 
-      case HmCrypto.Container.disclose(contained_msg, private_key, sample_public_key()) do
+      case HmCrypto.Container.disclose(contained_msg, private_key, sample_public_key(), :v1) do
         {:ok, cmd} -> cmd == data[:command]
         _ -> false
       end
