@@ -22,9 +22,13 @@ defmodule HmCrypto.Container do
   Enclose / Disclose a commands
   """
 
-  alias HmCrypto.Crypto
+  alias HmCrypto.{Crypto, EncryptedContainer, ErrorContainer}
+  import HmCrypto.ContainerHelper
 
   defstruct target_serial: <<>>,
+            sender_serial: <<>>,
+            version: 1,
+            request_id: <<>>,
             nonce: <<>>,
             command: <<>>,
             encrypted_flag: 0
@@ -113,6 +117,33 @@ defmodule HmCrypto.Container do
     <<0x00>> <> add_paddings(serial_number <> nonce <> <<0x01>> <> data) <> <<0xFF>>
   end
 
+  def enclose(
+        command,
+        sender_serial_number,
+        receiver_serial_number,
+        private_key,
+        public_key,
+        nonce,
+        request_id,
+        :v2
+      ) do
+    session_key = session_key(private_key, public_key, nonce)
+
+    data = encrypt_decrypt(command, private_key, public_key, nonce)
+
+    container = %EncryptedContainer{
+      target_serial: receiver_serial_number,
+      sender_serial: sender_serial_number,
+      encrypted_flag: 0x01,
+      nonce: nonce,
+      encrypted_data: data,
+      request_id: request_id,
+      version: 2
+    }
+
+    EncryptedContainer.to_bin(container, session_key)
+  end
+
   @doc """
   Create an Error container.
 
@@ -126,28 +157,33 @@ defmodule HmCrypto.Container do
   @spec enclose_error(
           command | disclose_error,
           serial_number,
-          nonce
+          nonce,
+          :v1
         ) :: unsecure_command
-  def enclose_error(command, serial_number, nonce) when is_binary(command) do
+  def enclose_error(command, serial_number, nonce, :v1) when is_binary(command) do
     <<0x00>> <> add_paddings(serial_number <> nonce <> <<0x00>> <> command) <> <<0xFF>>
   end
 
-  def enclose_error(:internal_error, serial_number, nonce) do
-    enclose_error(<<0x02>> <> @errror_internal_error, serial_number, nonce)
+  def enclose_error(:internal_error, serial_number, nonce, version) do
+    enclose_error(<<0x02>> <> @errror_internal_error, serial_number, nonce, version)
   end
 
-  def enclose_error(:timeout, serial_number, nonce) do
-    enclose_error(<<0x02>> <> @error_timeout, serial_number, nonce)
+  def enclose_error(:timeout, serial_number, nonce, version) do
+    enclose_error(<<0x02>> <> @error_timeout, serial_number, nonce, version)
   end
 
-  def enclose_error(error_atom, serial_number, nonce)
+  def enclose_error(error_atom, serial_number, nonce, version)
       when error_atom in [:invalid_data, :unencrypted_command] do
-    enclose_error(<<0x02>> <> @error_invalid_data, serial_number, nonce)
+    enclose_error(<<0x02>> <> @error_invalid_data, serial_number, nonce, version)
   end
 
-  def enclose_error(error_atom, serial_number, nonce)
+  def enclose_error(error_atom, serial_number, nonce, version)
       when error_atom in [:invalid_hmac, :invalid_secure_command] do
-    enclose_error(<<0x02>> <> @error_invalid_hmac, serial_number, nonce)
+    enclose_error(<<0x02>> <> @error_invalid_hmac, serial_number, nonce, version)
+  end
+
+  def enclose_error(error_container) do
+    ErrorContainer.to_bin(error_container)
   end
 
   @doc """
@@ -161,22 +197,45 @@ defmodule HmCrypto.Container do
       iex> HmCrypto.Container.disclose(unencrypted_command, <<0x67, 0x61, 0x72, 0x62, 0x61, 0x67, 0x65>>, <<0x67, 0x61, 0x72, 0x62, 0x61, 0x67, 0x65>>, :v1)
       {:error, :unencrypted_command}
   """
+
   @spec disclose(
           secure_command,
           Crypto.private_key(),
-          HmCrypto.AccessCertificate.access_certificate_binary() | HmCrypto.Crypto.public_key(),
-          :v1
+          HmCrypto.AccessCertificate.access_certificate_binary() | HmCrypto.Crypto.public_key()
         ) :: {:ok, command} | {:error, disclose_error} | {:error, container_parser_error}
+  def disclose(secure_command, private_key, public_key) do
+    disclose(secure_command, private_key, public_key, :v2)
+  end
+
   def disclose(container_data, private_key, access_certificate, :v1) do
     with {:ok, container} <- destruct_container(container_data),
          {:ok, :encrypted} <- encrypted?(container.encrypted_flag) do
-      disclose_command(container.command, private_key, access_certificate, container.nonce)
+      disclose_command(container.encrypted_data, private_key, access_certificate, container.nonce)
     else
       {:ok, :not_encrypted} ->
         {:error, :unencrypted_command}
 
       error ->
         error
+    end
+  end
+
+  def disclose(secure_command, private_key, public_key, :v2) do
+    with {:ok, encrypted_container} <- EncryptedContainer.from_bin(secure_command),
+         {:ok, :encrypted} <- encrypted?(encrypted_container.encrypted_flag),
+         :ok <-
+           EncryptedContainer.validate_hmac(
+             encrypted_container,
+             private_key,
+             public_key
+           ) do
+      {:ok,
+       encrypt_decrypt(
+         encrypted_container.encrypted_data,
+         private_key,
+         public_key,
+         encrypted_container.nonce
+       )}
     end
   end
 
@@ -195,11 +254,11 @@ defmodule HmCrypto.Container do
   """
   @spec disclose_error(binary) ::
           {:error, :error_message_is_encrypted} | {:error, container_parser_error}
-  def disclose_error(container_data) do
-    with {:ok, %{command: command, encrypted_flag: encrypted_flag}} <-
-           destruct_container(container_data),
+  def disclose_error(error_container_binary) do
+    with {:ok, %{encrypted_flag: encrypted_flag} = error_container} <-
+           ErrorContainer.from_bin(error_container_binary),
          {:ok, :not_encrypted} <- encrypted?(encrypted_flag) do
-      {:ok, command}
+      {:ok, error_container.command_binary}
     else
       {:ok, :encrypted} -> {:error, :error_message_is_encrypted}
       error -> error
@@ -219,66 +278,16 @@ defmodule HmCrypto.Container do
       true
       iex> container.encrypted_flag == 1
       true
-      iex> container.target_serial == serial_number
+      iex> container.sender_serial == serial_number
       true
   """
   @spec destruct_container(binary) :: {:ok, t} | {:error, container_parser_error}
   def destruct_container(container_data) when byte_size(container_data) > 21 do
-    inside_size = byte_size(container_data) - 2
-
-    with {:ok, inside_data} <- extract_inside_data(container_data, inside_size),
-         inside_data <- remove_paddings(inside_data),
-         {:ok, {target_serial, nonce, encrypted_flag, command}} <- extract_prop(inside_data) do
-      {:ok,
-       %__MODULE__{
-         target_serial: target_serial,
-         nonce: nonce,
-         command: command,
-         encrypted_flag: encrypted_flag
-       }}
-    end
+    EncryptedContainer.from_bin(container_data)
   end
 
   def destruct_container(_) do
     {:error, :short_container}
-  end
-
-  defp extract_inside_data(container_data, inside_size) do
-    case container_data do
-      <<0x00, inside_data::binary-size(inside_size), 0xFF>> -> {:ok, inside_data}
-      _ -> {:error, :invalid_container_wrapper}
-    end
-  end
-
-  defp extract_prop(inside_data) do
-    case inside_data do
-      <<target_serial::binary-size(9), nonce::binary-size(9), encrypted_flag, command::binary>> ->
-        {:ok, {target_serial, nonce, encrypted_flag, command}}
-
-      _ ->
-        {:error, :invalid_container_property}
-    end
-  end
-
-  defp add_paddings(<<>>), do: <<>>
-
-  defp add_paddings(<<first_byte>> <> rest) do
-    escape_byte(first_byte) <> add_paddings(rest)
-  end
-
-  defp escape_byte(byte) when byte in [0x00, 0xFE, 0xFF], do: <<0xFE, byte>>
-  defp escape_byte(byte), do: <<byte>>
-
-  defp remove_paddings(<<>>) do
-    <<>>
-  end
-
-  defp remove_paddings(<<0xFE, data, rest::binary>>) do
-    <<data>> <> remove_paddings(rest)
-  end
-
-  defp remove_paddings(<<data, rest::binary>>) do
-    <<data>> <> remove_paddings(rest)
   end
 
   @doc """
@@ -347,10 +356,4 @@ defmodule HmCrypto.Container do
 
   defp encrypted?(0x00), do: {:ok, :not_encrypted}
   defp encrypted?(_), do: {:ok, :encrypted}
-
-  defp session_key(private_key, public_key, nonce) do
-    private_key
-    |> Crypto.compute_key(public_key)
-    |> Crypto.hmac(nonce)
-  end
 end

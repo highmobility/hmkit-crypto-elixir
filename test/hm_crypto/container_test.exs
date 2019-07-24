@@ -20,40 +20,41 @@
 defmodule HmCrypto.ContainerTest do
   use ExUnit.Case
   use PropCheck
-  doctest HmCrypto.Container
-  alias HmCrypto.Container
+  # doctest HmCrypto.Container
+  alias HmCrypto.{Container, Crypto, EncryptedContainer, ErrorContainer}
 
+  @target_serial <<0xFF, 151, 197, 254, 242, 65, 186, 175, 0x00>>
   @serial_number <<93, 151, 197, 254, 242, 65, 186, 175, 170>>
   @nonce <<0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08>>
 
-  describe "error container" do
+  describe "error container v1" do
     test "internal_error" do
-      container_error = Container.enclose_error(:internal_error, @serial_number, @nonce)
+      container_error = Container.enclose_error(:internal_error, @serial_number, @nonce, :v1)
 
       assert Container.disclose_error(container_error) == {:ok, <<0x2, 0x00, 0x01>>}
     end
 
     test "timeout" do
-      container_error = Container.enclose_error(:timeout, @serial_number, @nonce)
+      container_error = Container.enclose_error(:timeout, @serial_number, @nonce, :v1)
 
       assert Container.disclose_error(container_error) == {:ok, <<0x2, 0x00, 0x09>>}
     end
 
     test "invalid_data" do
-      container_error = Container.enclose_error(:invalid_data, @serial_number, @nonce)
+      container_error = Container.enclose_error(:invalid_data, @serial_number, @nonce, :v1)
 
       assert Container.disclose_error(container_error) == {:ok, <<0x2, 0x01, 0x04>>}
     end
 
     test "invalid_hmac" do
-      container_error = Container.enclose_error(:invalid_hmac, @serial_number, @nonce)
+      container_error = Container.enclose_error(:invalid_hmac, @serial_number, @nonce, :v1)
 
       assert Container.disclose_error(container_error) == {:ok, <<0x2, 0x36, 0x08>>}
     end
 
     test "disclose an error" do
       serial_number = <<0x0, 0xFF, 197, 254, 242, 65, 186, 175, 170>>
-      container_error = Container.enclose_error(:invalid_hmac, serial_number, @nonce)
+      container_error = Container.enclose_error(:invalid_hmac, serial_number, @nonce, :v1)
 
       assert {:ok, _} = Container.destruct_container(container_error)
 
@@ -68,6 +69,22 @@ defmodule HmCrypto.ContainerTest do
           encrypted_flag, 2, 54, 8, 255>>
 
       assert Container.disclose_error(container_error) == {:error, :error_message_is_encrypted}
+    end
+  end
+
+  describe "error container v2" do
+    test "internal_error" do
+      error_container_orginal = %ErrorContainer{
+        sender_serial: @serial_number,
+        target_serial: @target_serial,
+        nonce: @nonce,
+        version: 2,
+        command: :internal_error
+      }
+
+      error_container_bin = Container.enclose_error(error_container_orginal)
+
+      assert {:ok, <<0x2, 0x00, 0x01>>} == Container.disclose_error(error_container_bin)
     end
   end
 
@@ -91,6 +108,44 @@ defmodule HmCrypto.ContainerTest do
 
       assert Container.destruct_container(invalid_container) ==
                {:error, :invalid_container_property}
+    end
+  end
+
+  describe "enclose/8 v2" do
+    test "enclose a command in Telematics Container" do
+      {_, alice_private_key} = Crypto.generate_key()
+      {bob_public_key, _} = Crypto.generate_key()
+      command = :crypto.strong_rand_bytes(20)
+      nonce = :crypto.strong_rand_bytes(9)
+      sender_serial = :crypto.strong_rand_bytes(9)
+      target_serial = :crypto.strong_rand_bytes(9)
+      request_id = :crypto.strong_rand_bytes(12)
+
+      telematics_container_bin =
+        Container.enclose(
+          command,
+          sender_serial,
+          target_serial,
+          alice_private_key,
+          bob_public_key,
+          nonce,
+          request_id,
+          :v2
+        )
+
+      assert {:ok, encrypted_container} = EncryptedContainer.from_bin(telematics_container_bin)
+      assert encrypted_container.version == 2
+      assert encrypted_container.sender_serial == sender_serial
+      assert encrypted_container.target_serial == target_serial
+      assert encrypted_container.request_id == request_id
+      assert encrypted_container.nonce == nonce
+
+      assert :ok ==
+               EncryptedContainer.validate_hmac(
+                 encrypted_container,
+                 alice_private_key,
+                 bob_public_key
+               )
     end
   end
 
@@ -127,6 +182,33 @@ defmodule HmCrypto.ContainerTest do
 
         assert decrypted_data == raw_data
       end
+    end
+  end
+
+  property "enclose v1 container" do
+    forall data <- [
+             device_serial: serial_number(),
+             device_key_pair: key_pair(),
+             nonce: serial_number(),
+             command: binary()
+           ] do
+      private_key = elem(data[:device_key_pair], 1)
+
+      contained_msg =
+        HmCrypto.Container.enclose(
+          data[:command],
+          data[:device_serial],
+          private_key,
+          sample_access_cert(),
+          data[:nonce],
+          :v1
+        )
+
+      {:ok, encrypted_container} = EncryptedContainer.from_bin(contained_msg)
+      assert encrypted_container.version == 1
+      assert encrypted_container.sender_serial == data[:device_serial]
+      assert encrypted_container.nonce == data[:nonce]
+      assert encrypted_container.encrypted_flag == 1
     end
   end
 
@@ -178,6 +260,44 @@ defmodule HmCrypto.ContainerTest do
       case HmCrypto.Container.disclose(contained_msg, private_key, sample_public_key(), :v1) do
         {:ok, cmd} -> cmd == data[:command]
         _ -> false
+      end
+    end
+  end
+
+  property "symmetric enclosing/disclosing (v2) a command with public key" do
+    forall data <- [
+             vehicle_serial: serial_number(),
+             device_serial: serial_number(),
+             device_key_pair: key_pair(),
+             nonce: serial_number(),
+             request_id: serial_number(),
+             raw_data: binary()
+           ] do
+      private_key = elem(data[:device_key_pair], 1)
+
+      telematics_container_bin =
+        Container.enclose(
+          data[:raw_data],
+          data[:device_serial],
+          data[:vehicle_serial],
+          private_key,
+          sample_public_key(),
+          data[:nonce],
+          data[:request_id],
+          :v2
+        )
+
+      case Container.disclose(
+             telematics_container_bin,
+             private_key,
+             sample_public_key(),
+             :v2
+           ) do
+        {:ok, raw_data} ->
+          assert raw_data == data[:raw_data]
+
+        _ ->
+          false
       end
     end
   end
