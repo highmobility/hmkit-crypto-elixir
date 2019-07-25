@@ -221,8 +221,13 @@ defmodule HmCrypto.Container do
   end
 
   def disclose(secure_command, private_key, public_key, :v2) do
-    with {:ok, encrypted_container} <- EncryptedContainer.from_bin(secure_command),
-         {:ok, :encrypted} <- encrypted?(encrypted_container.encrypted_flag),
+    with {:ok, encrypted_container} <- EncryptedContainer.from_bin(secure_command) do
+      disclose_encrypted_container(encrypted_container, private_key, public_key)
+    end
+  end
+
+  def disclose_encrypted_container(encrypted_container, private_key, public_key) do
+    with {:ok, :encrypted} <- encrypted?(encrypted_container.encrypted_flag),
          :ok <-
            EncryptedContainer.validate_hmac(
              encrypted_container,
