@@ -1,37 +1,30 @@
-name: Test
-
-on:
-  push: {branches: master}
-  pull_request: {branches: master}
-  repository_dispatch:
-
+name: CI
+on: [pull_request, push]
 jobs:
-  test:
-    runs-on: ubuntu-latest
-    name: OTP ${{matrix.pair.otp-version}} / Elixir ${{matrix.pair.elixir-version}}
-    strategy:
-      matrix:
-        pair:
-          # Full Versions
-          - otp-version: 22.0
-            elixir-version: 1.9.1
-          - otp-version: 21.0
-            elixir-version: 1.8.1
-          - otp-version: 21.x
-            elixir-version: <1.9.1
-          - otp-version: 22.0
-            elixir-version: master
-    steps:
-      - uses: actions/checkout@v1.0.0
-      - name: Use actions/setup-elixir
-        uses: actions/setup-node@v1.2.0
-        with:
-          otp-version: ${{matrix.pair.otp-version}}
-          elixir-version: ${{matrix.pair.elixir-version}}
-      - name: Run Mix project tests
-        run: |-
-          mix deps.get
-          mix test
-          MIX_ENV=test mix dialyzer --halt-exit-status
-          mix credo
-          mix format --check-formatted
+ mix_test:
+   name: mix test (Elixir ${{ matrix.elixir }} OTP ${{ matrix.otp }})
+   strategy:
+     matrix:
+       elixir: ['1.8.1', '1.9.1']
+       include:
+         - elixir: '1.8.1'
+           otp: '21.x'
+         - elixir: '1.9.1'
+           otp: '22.x'
+   runs-on: ubuntu-16.04
+   steps:
+     - uses: actions/checkout@v1
+     - uses: actions/setup-elixir@v1.0.0
+       with:
+         otp-version: ${{ matrix.otp }}
+         elixir-version: ${{ matrix.elixir }}
+     - name: Install Dependencies
+       run: mix deps.get
+     - name: Run Tests
+       run: mix test
+     - name: Run credo
+       run: mix credo
+     - name: Run formatter 
+       run: mix format --check-formatted
+     - name: Run dialyzer
+       run: mix dialyzer
