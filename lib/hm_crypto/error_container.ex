@@ -58,8 +58,7 @@ defmodule HmCrypto.ErrorContainer do
         error_container.nonce <>
         <<00::integer-16>> <>
         <<@encrypted_truned_off>> <>
-        <<@unknown_content_type>> <>
-        <<byte_size(command)::integer-32>> <> command
+        <<@unknown_content_type>> <> <<byte_size(command)::integer-32>> <> command
 
     <<0x00>> <> add_paddings(inner_data) <> <<0xFF>>
   end
