@@ -18,6 +18,16 @@
 # licensing@high-mobility.com
 
 defmodule HmCrypto.ErrorContainer do
+  @error_cmd_id 0x02
+  @unknown_content_type 0x00
+  @unknown_content_type_atom :unknown
+  @encrypted_truned_off 0x00
+
+  @errror_internal_error <<0x00, 0x01>>
+  @error_invalid_data <<0x01, 0x04>>
+  @error_timeout <<0x00, 0x09>>
+  @error_invalid_hmac <<0x36, 0x08>>
+
   defstruct target_serial: nil,
             sender_serial: nil,
             version: nil,
@@ -25,14 +35,8 @@ defmodule HmCrypto.ErrorContainer do
             nonce: nil,
             command: nil,
             command_binary: nil,
-            encrypted_flag: 0
-
-  @error_cmd_id 0x02
-
-  @errror_internal_error <<0x00, 0x01>>
-  @error_invalid_data <<0x01, 0x04>>
-  @error_timeout <<0x00, 0x09>>
-  @error_invalid_hmac <<0x36, 0x08>>
+            encrypted_flag: 0,
+            content_type: @unknown_content_type_atom
 
   import HmCrypto.ContainerHelper
 
@@ -53,7 +57,8 @@ defmodule HmCrypto.ErrorContainer do
         error_container.target_serial <>
         error_container.nonce <>
         <<00::integer-16>> <>
-        <<0x00>> <>
+        <<@encrypted_truned_off>> <>
+        <<@unknown_content_type>> <>
         <<byte_size(command)::integer-32>> <> command
 
     <<0x00>> <> add_paddings(inner_data) <> <<0xFF>>
@@ -69,11 +74,12 @@ defmodule HmCrypto.ErrorContainer do
     end
   end
 
-  defp to_struct_v2(inside_binary) do
+  def to_struct_v2(inside_binary) do
     case inside_binary do
       <<0x02, sender_serial::binary-size(9), target_serial::binary-size(9), nonce::binary-size(9),
         request_id_size::integer-16, request_id::binary-size(request_id_size), encrypted_flag,
-        error_command_size::integer-32, error_command::binary-size(error_command_size)>> ->
+        @unknown_content_type, error_command_size::integer-32,
+        error_command::binary-size(error_command_size)>> ->
         {:ok,
          %__MODULE__{
            target_serial: target_serial,
@@ -82,6 +88,7 @@ defmodule HmCrypto.ErrorContainer do
            nonce: nonce,
            command_binary: error_command,
            request_id: request_id,
+           content_type: @unknown_content_type_atom,
            version: 2
          }}
 
@@ -93,6 +100,7 @@ defmodule HmCrypto.ErrorContainer do
            nonce: nonce,
            encrypted_flag: encrypted_flag,
            command_binary: command
+           # content_type: content_type
          }}
 
       _ ->

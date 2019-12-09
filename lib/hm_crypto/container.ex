@@ -22,7 +22,7 @@ defmodule HmCrypto.Container do
   Enclose / Disclose a commands
   """
 
-  alias HmCrypto.{Crypto, EncryptedContainer, ErrorContainer}
+  alias HmCrypto.{Crypto, EncryptedContainer, ErrorContainer, ContentType}
   import HmCrypto.ContainerHelper
 
   defstruct target_serial: <<>>,
@@ -31,13 +31,15 @@ defmodule HmCrypto.Container do
             request_id: <<>>,
             nonce: <<>>,
             command: <<>>,
-            encrypted_flag: 0
+            encrypted_flag: 0,
+            type: :unknown
 
   @type t :: %__MODULE__{
           target_serial: <<_::72>>,
           nonce: <<_::72>>,
           command: binary,
-          encrypted_flag: integer
+          encrypted_flag: integer,
+          type: ContentType.t()
         }
 
   @type container_parser_error ::
@@ -57,7 +59,7 @@ defmodule HmCrypto.Container do
   @type data :: binary
   @type secure_command :: binary
   @type unsecure_command :: binary
-  @type serial_number :: binary
+  @type serial_number :: <<_::72>>
 
   @errror_internal_error <<0x00, 0x01>>
   @error_invalid_data <<0x01, 0x04>>
@@ -117,6 +119,18 @@ defmodule HmCrypto.Container do
     <<0x00>> <> add_paddings(serial_number <> nonce <> <<0x01>> <> data) <> <<0xFF>>
   end
 
+  @spec enclose(
+          command,
+          serial_number,
+          serial_number,
+          Crypto.private_key(),
+          HmCrypto.AccessCertificate.access_certificate_binary() | HmCrypto.Crypto.public_key(),
+          nonce,
+          binary,
+          ContentType.t(),
+          :v2
+        ) :: secure_command
+
   def enclose(
         command,
         sender_serial_number,
@@ -125,6 +139,7 @@ defmodule HmCrypto.Container do
         public_key,
         nonce,
         request_id,
+        content_type,
         :v2
       ) do
     session_key = session_key(private_key, public_key, nonce)
@@ -138,6 +153,7 @@ defmodule HmCrypto.Container do
       nonce: nonce,
       encrypted_data: data,
       request_id: request_id,
+      content_type: content_type,
       version: 2
     }
 
