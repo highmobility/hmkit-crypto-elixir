@@ -302,7 +302,7 @@ defmodule HmCrypto.Container do
       iex> container.sender_serial == serial_number
       true
   """
-  @spec destruct_container(binary) :: {:ok, t} | {:error, container_parser_error}
+  @spec destruct_container(binary) :: {:ok, map} | {:error, container_parser_error}
   def destruct_container(container_data) when byte_size(container_data) > 21 do
     EncryptedContainer.from_bin(container_data)
   end

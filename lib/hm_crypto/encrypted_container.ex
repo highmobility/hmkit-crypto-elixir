@@ -28,9 +28,13 @@ defmodule HmCrypto.EncryptedContainer do
             content_type: nil,
             hmac: nil
 
+  @type t :: %__MODULE__{}
+  @type container_parser_error :: :invalid_container_property
+
   import HmCrypto.ContainerHelper
   alias HmCrypto.{Crypto, ContentType}
 
+  @spec from_bin(binary) :: {:ok, t} | {:error, container_parser_error}
   def from_bin(container_binary) do
     inside_size = byte_size(container_binary) - 2
 
