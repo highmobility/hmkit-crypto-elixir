@@ -32,14 +32,14 @@ defmodule HmCrypto.Container do
             nonce: <<>>,
             command: <<>>,
             encrypted_flag: 0,
-            type: :unknown
+            content_type: :unknown
 
   @type t :: %__MODULE__{
           target_serial: <<_::72>>,
           nonce: <<_::72>>,
           command: binary,
           encrypted_flag: integer,
-          type: ContentType.t()
+          content_type: ContentType.t()
         }
 
   @type container_parser_error ::
