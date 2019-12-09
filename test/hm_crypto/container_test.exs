@@ -122,17 +122,22 @@ defmodule HmCrypto.ContainerTest do
       target_serial = :crypto.strong_rand_bytes(9)
       request_id = :crypto.strong_rand_bytes(12)
 
+      container =
+        Container.new(%{
+          version: 2,
+          target_serial: target_serial,
+          sender_serial: sender_serial,
+          nonce: nonce,
+          content_type: :unknown,
+          command: command,
+          request_id: request_id
+        })
+
       telematics_container_bin =
         Container.enclose(
-          command,
-          sender_serial,
-          target_serial,
+          container,
           alice_private_key,
-          bob_public_key,
-          nonce,
-          request_id,
-          :unknown,
-          :v2
+          bob_public_key
         )
 
       assert {:ok, encrypted_container} = EncryptedContainer.from_bin(telematics_container_bin)
@@ -279,18 +284,18 @@ defmodule HmCrypto.ContainerTest do
              ] do
         private_key = elem(data[:device_key_pair], 1)
 
-        telematics_container_bin =
-          Container.enclose(
-            data[:raw_data],
-            data[:device_serial],
-            data[:vehicle_serial],
-            private_key,
-            sample_public_key(),
-            data[:nonce],
-            data[:request_id],
-            :auto_api,
-            :v2
-          )
+        container =
+          Container.new(%{
+            version: 2,
+            target_serial: data[:device_serial],
+            sender_serial: data[:vehicle_serial],
+            nonce: data[:nonce],
+            content_type: :auto_api,
+            command: data[:raw_data],
+            request_id: data[:request_id]
+          })
+
+        telematics_container_bin = Container.enclose(container, private_key, sample_public_key())
 
         case Container.disclose(
                telematics_container_bin,

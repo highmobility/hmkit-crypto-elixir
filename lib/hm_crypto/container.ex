@@ -67,6 +67,14 @@ defmodule HmCrypto.Container do
   @error_invalid_hmac <<0x36, 0x08>>
 
   @doc """
+  Create new empty Container struct
+  """
+  @spec new(map) :: t
+  def new(params \\ %{version: 2}) do
+    struct(__MODULE__, params)
+  end
+
+  @doc """
   Encrypts/Decrypts the data
   """
   @spec encrypt_decrypt(data, Crypto.private_key(), Crypto.public_key(), nonce) :: binary
@@ -120,41 +128,24 @@ defmodule HmCrypto.Container do
   end
 
   @spec enclose(
-          command,
-          serial_number,
-          serial_number,
+          t,
           Crypto.private_key(),
-          HmCrypto.AccessCertificate.access_certificate_binary() | HmCrypto.Crypto.public_key(),
-          nonce,
-          binary,
-          ContentType.t(),
-          :v2
+          HmCrypto.AccessCertificate.access_certificate_binary() | HmCrypto.Crypto.public_key()
         ) :: secure_command
+  def enclose(container, private_key, public_key) do
+    session_key = session_key(private_key, public_key, container.nonce)
 
-  def enclose(
-        command,
-        sender_serial_number,
-        receiver_serial_number,
-        private_key,
-        public_key,
-        nonce,
-        request_id,
-        content_type,
-        :v2
-      ) do
-    session_key = session_key(private_key, public_key, nonce)
-
-    data = encrypt_decrypt(command, private_key, public_key, nonce)
+    data = encrypt_decrypt(container.command, private_key, public_key, container.nonce)
 
     container = %EncryptedContainer{
-      target_serial: receiver_serial_number,
-      sender_serial: sender_serial_number,
+      target_serial: container.target_serial,
+      sender_serial: container.sender_serial,
       encrypted_flag: 0x01,
-      nonce: nonce,
+      nonce: container.nonce,
       encrypted_data: data,
-      request_id: request_id,
-      content_type: content_type,
-      version: 2
+      request_id: container.request_id,
+      content_type: container.content_type,
+      version: container.version
     }
 
     EncryptedContainer.to_bin(container, session_key)
