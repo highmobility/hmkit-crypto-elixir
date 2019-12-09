@@ -22,7 +22,7 @@ defmodule HmCrypto.Container do
   Enclose / Disclose a commands
   """
 
-  alias HmCrypto.{Crypto, EncryptedContainer, ErrorContainer}
+  alias HmCrypto.{Crypto, EncryptedContainer, ErrorContainer, ContentType}
   import HmCrypto.ContainerHelper
 
   defstruct target_serial: <<>>,
@@ -31,13 +31,15 @@ defmodule HmCrypto.Container do
             request_id: <<>>,
             nonce: <<>>,
             command: <<>>,
-            encrypted_flag: 0
+            encrypted_flag: 0,
+            content_type: :unknown
 
   @type t :: %__MODULE__{
           target_serial: <<_::72>>,
           nonce: <<_::72>>,
           command: binary,
-          encrypted_flag: integer
+          encrypted_flag: integer,
+          content_type: ContentType.t()
         }
 
   @type container_parser_error ::
@@ -57,12 +59,20 @@ defmodule HmCrypto.Container do
   @type data :: binary
   @type secure_command :: binary
   @type unsecure_command :: binary
-  @type serial_number :: binary
+  @type serial_number :: <<_::72>>
 
   @errror_internal_error <<0x00, 0x01>>
   @error_invalid_data <<0x01, 0x04>>
   @error_timeout <<0x00, 0x09>>
   @error_invalid_hmac <<0x36, 0x08>>
+
+  @doc """
+  Create new empty Container struct
+  """
+  @spec new(map) :: t
+  def new(params \\ %{version: 2}) do
+    struct(__MODULE__, params)
+  end
 
   @doc """
   Encrypts/Decrypts the data
@@ -117,28 +127,25 @@ defmodule HmCrypto.Container do
     <<0x00>> <> add_paddings(serial_number <> nonce <> <<0x01>> <> data) <> <<0xFF>>
   end
 
-  def enclose(
-        command,
-        sender_serial_number,
-        receiver_serial_number,
-        private_key,
-        public_key,
-        nonce,
-        request_id,
-        :v2
-      ) do
-    session_key = session_key(private_key, public_key, nonce)
+  @spec enclose(
+          t,
+          Crypto.private_key(),
+          HmCrypto.AccessCertificate.access_certificate_binary() | HmCrypto.Crypto.public_key()
+        ) :: secure_command
+  def enclose(container, private_key, public_key) do
+    session_key = session_key(private_key, public_key, container.nonce)
 
-    data = encrypt_decrypt(command, private_key, public_key, nonce)
+    data = encrypt_decrypt(container.command, private_key, public_key, container.nonce)
 
     container = %EncryptedContainer{
-      target_serial: receiver_serial_number,
-      sender_serial: sender_serial_number,
+      target_serial: container.target_serial,
+      sender_serial: container.sender_serial,
       encrypted_flag: 0x01,
-      nonce: nonce,
+      nonce: container.nonce,
       encrypted_data: data,
-      request_id: request_id,
-      version: 2
+      request_id: container.request_id,
+      content_type: container.content_type,
+      version: container.version
     }
 
     EncryptedContainer.to_bin(container, session_key)
@@ -286,7 +293,7 @@ defmodule HmCrypto.Container do
       iex> container.sender_serial == serial_number
       true
   """
-  @spec destruct_container(binary) :: {:ok, t} | {:error, container_parser_error}
+  @spec destruct_container(binary) :: {:ok, map} | {:error, container_parser_error}
   def destruct_container(container_data) when byte_size(container_data) > 21 do
     EncryptedContainer.from_bin(container_data)
   end

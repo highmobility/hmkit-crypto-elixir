@@ -79,7 +79,8 @@ defmodule HmCrypto.ContainerTest do
         target_serial: @target_serial,
         nonce: @nonce,
         version: 2,
-        command: :internal_error
+        command: :internal_error,
+        content_type: :unknown
       }
 
       error_container_bin = Container.enclose_error(error_container_orginal)
@@ -121,16 +122,22 @@ defmodule HmCrypto.ContainerTest do
       target_serial = :crypto.strong_rand_bytes(9)
       request_id = :crypto.strong_rand_bytes(12)
 
+      container =
+        Container.new(%{
+          version: 2,
+          target_serial: target_serial,
+          sender_serial: sender_serial,
+          nonce: nonce,
+          content_type: :unknown,
+          command: command,
+          request_id: request_id
+        })
+
       telematics_container_bin =
         Container.enclose(
-          command,
-          sender_serial,
-          target_serial,
+          container,
           alice_private_key,
-          bob_public_key,
-          nonce,
-          request_id,
-          :v2
+          bob_public_key
         )
 
       assert {:ok, encrypted_container} = EncryptedContainer.from_bin(telematics_container_bin)
@@ -139,6 +146,7 @@ defmodule HmCrypto.ContainerTest do
       assert encrypted_container.target_serial == target_serial
       assert encrypted_container.request_id == request_id
       assert encrypted_container.nonce == nonce
+      assert encrypted_container.content_type == :unknown
 
       assert :ok ==
                EncryptedContainer.validate_hmac(
@@ -264,40 +272,43 @@ defmodule HmCrypto.ContainerTest do
     end
   end
 
-  property "symmetric enclosing/disclosing (v2) a command with public key" do
-    forall data <- [
-             vehicle_serial: serial_number(),
-             device_serial: serial_number(),
-             device_key_pair: key_pair(),
-             nonce: serial_number(),
-             request_id: serial_number(),
-             raw_data: binary()
-           ] do
-      private_key = elem(data[:device_key_pair], 1)
+  describe "Container V2" do
+    property "symmetric enclosing/disclosing a command with public key" do
+      forall data <- [
+               vehicle_serial: serial_number(),
+               device_serial: serial_number(),
+               device_key_pair: key_pair(),
+               nonce: serial_number(),
+               request_id: serial_number(),
+               raw_data: binary()
+             ] do
+        private_key = elem(data[:device_key_pair], 1)
 
-      telematics_container_bin =
-        Container.enclose(
-          data[:raw_data],
-          data[:device_serial],
-          data[:vehicle_serial],
-          private_key,
-          sample_public_key(),
-          data[:nonce],
-          data[:request_id],
-          :v2
-        )
+        container =
+          Container.new(%{
+            version: 2,
+            target_serial: data[:device_serial],
+            sender_serial: data[:vehicle_serial],
+            nonce: data[:nonce],
+            content_type: :auto_api,
+            command: data[:raw_data],
+            request_id: data[:request_id]
+          })
 
-      case Container.disclose(
-             telematics_container_bin,
-             private_key,
-             sample_public_key(),
-             :v2
-           ) do
-        {:ok, raw_data} ->
-          assert raw_data == data[:raw_data]
+        telematics_container_bin = Container.enclose(container, private_key, sample_public_key())
 
-        _ ->
-          false
+        case Container.disclose(
+               telematics_container_bin,
+               private_key,
+               sample_public_key(),
+               :v2
+             ) do
+          {:ok, raw_data} ->
+            assert raw_data == data[:raw_data]
+
+          _ ->
+            false
+        end
       end
     end
   end

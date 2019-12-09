@@ -25,11 +25,16 @@ defmodule HmCrypto.EncryptedContainer do
             nonce: nil,
             encrypted_data: nil,
             encrypted_flag: nil,
+            content_type: nil,
             hmac: nil
 
-  import HmCrypto.ContainerHelper
-  alias HmCrypto.Crypto
+  @type t :: %__MODULE__{}
+  @type container_parser_error :: :invalid_container_property
 
+  import HmCrypto.ContainerHelper
+  alias HmCrypto.{Crypto, ContentType}
+
+  @spec from_bin(binary) :: {:ok, t} | {:error, container_parser_error}
   def from_bin(container_binary) do
     inside_size = byte_size(container_binary) - 2
 
@@ -44,7 +49,7 @@ defmodule HmCrypto.EncryptedContainer do
     case inside_binary do
       <<0x02, sender_serial::binary-size(9), target_serial::binary-size(9), nonce::binary-size(9),
         request_id_size::integer-16, request_id::binary-size(request_id_size), encrypted_flag,
-        encrypted_command_size::integer-32,
+        content_type, encrypted_command_size::integer-32,
         encrypted_command::binary-size(encrypted_command_size),
         encrypted_command_hmac::binary-size(32)>> ->
         {:ok,
@@ -56,6 +61,7 @@ defmodule HmCrypto.EncryptedContainer do
            encrypted_data: encrypted_command,
            request_id: request_id,
            hmac: encrypted_command_hmac,
+           content_type: ContentType.from_bin(content_type),
            version: 2
          }}
 
@@ -73,6 +79,7 @@ defmodule HmCrypto.EncryptedContainer do
       <<encrypted_container.version, encrypted_container.sender_serial::binary,
         encrypted_container.target_serial::binary, encrypted_container.nonce::binary,
         request_id_data::binary, encrypted_container.encrypted_flag,
+        ContentType.to_bin(encrypted_container.content_type),
         byte_size(encrypted_container.encrypted_data)::integer-32,
         encrypted_container.encrypted_data::binary>>
 
