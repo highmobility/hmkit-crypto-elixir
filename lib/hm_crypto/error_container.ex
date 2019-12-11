@@ -98,8 +98,9 @@ defmodule HmCrypto.ErrorContainer do
            target_serial: serial_number,
            nonce: nonce,
            encrypted_flag: encrypted_flag,
-           command_binary: command
-           # content_type: content_type
+           command_binary: command,
+           version: 1,
+           content_type: nil
          }}
 
       _ ->
