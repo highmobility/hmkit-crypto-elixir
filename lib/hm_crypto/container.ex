@@ -248,6 +248,12 @@ defmodule HmCrypto.Container do
          public_key,
          encrypted_container.nonce
        )}
+    else
+      {:ok, :not_encrypted} ->
+        {:error, :unencrypted_command}
+
+      error ->
+        error
     end
   end
 

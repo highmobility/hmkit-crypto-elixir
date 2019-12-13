@@ -311,6 +311,25 @@ defmodule HmCrypto.ContainerTest do
         end
       end
     end
+
+    test "fails to disclose not encrypted secure container" do
+      invalid_data =
+        <<0, 2, 2, 2, 2, 2, 2, 2, 2, 2, 1, 35, 96, 57, 137, 73, 93, 16, 219, 0, 181, 233, 8, 6,
+          152, 161, 96, 125, 13, 44, 73, 42, 141, 244, 227, 154, 42, 177, 71, 37, 72, 202, 25,
+          164, 153, 0, 28, 111, 145, 105, 87, 150, 238, 225, 92, 123, 111, 216, 8, 175, 32, 251,
+          191, 252, 37, 104, 252, 40, 6, 105, 91, 166, 87, 50, 32, 55, 68, 159, 241, 56, 143, 35,
+          191, 122, 45, 225, 26, 27, 196, 26, 93, 214, 37, 197, 38, 2, 76, 167, 45, 136, 255>>
+
+      {_, alice_private_key} = Crypto.generate_key()
+      {bob_public_key, _} = Crypto.generate_key()
+
+      assert {:error, :unencrypted_command} =
+               Container.disclose(
+                 invalid_data,
+                 alice_private_key,
+                 bob_public_key
+               )
+    end
   end
 
   def serial_number do
