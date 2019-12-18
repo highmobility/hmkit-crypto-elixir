@@ -32,7 +32,7 @@ defmodule HmCrypto.EncryptedContainer do
   @type container_parser_error :: :invalid_container_property
 
   import HmCrypto.ContainerHelper
-  alias HmCrypto.{Crypto, ContentType}
+  alias HmCrypto.{Crypto, ContentType, HmCrypto.AccessCertificate}
 
   @spec from_bin(binary) :: {:ok, t} | {:error, container_parser_error}
   def from_bin(container_binary) do
@@ -71,32 +71,41 @@ defmodule HmCrypto.EncryptedContainer do
   end
 
   def to_bin(encrypted_container, session_key) do
-    request_id_data =
-      <<byte_size(encrypted_container.request_id)::integer-16,
-        encrypted_container.request_id::binary>>
-
-    telematics_container =
-      <<encrypted_container.version, encrypted_container.sender_serial::binary,
-        encrypted_container.target_serial::binary, encrypted_container.nonce::binary,
-        request_id_data::binary, encrypted_container.encrypted_flag,
-        ContentType.to_bin(encrypted_container.content_type),
-        byte_size(encrypted_container.encrypted_data)::integer-32,
-        encrypted_container.encrypted_data::binary>>
+    telematics_container = to_bin_message_container(encrypted_container)
 
     telematics_container_with_hmac =
-      telematics_container <> Crypto.hmac(session_key, encrypted_container.encrypted_data)
+      telematics_container <> Crypto.hmac(session_key, telematics_container)
 
     <<0x00>> <> add_paddings(telematics_container_with_hmac) <> <<0xFF>>
   end
 
+  @spec validate_hmac(
+          t,
+          Crypto.private_key(),
+          AccessCertificate.access_certificate_binary() | Crypto.public_key()
+        ) :: :ok | {:error, :invalid_hmac}
   def validate_hmac(encrypted_container, private_key, public_key) do
     session_key = session_key(private_key, public_key, encrypted_container.nonce)
 
-    if Crypto.hmac(session_key, encrypted_container.encrypted_data) == encrypted_container.hmac do
+    if Crypto.hmac(session_key, to_bin_message_container(encrypted_container)) ==
+         encrypted_container.hmac do
       :ok
     else
       {:error, :invalid_hmac}
     end
+  end
+
+  defp to_bin_message_container(encrypted_container) do
+    request_id_data =
+      <<byte_size(encrypted_container.request_id)::integer-16,
+        encrypted_container.request_id::binary>>
+
+    <<encrypted_container.version, encrypted_container.sender_serial::binary,
+      encrypted_container.target_serial::binary, encrypted_container.nonce::binary,
+      request_id_data::binary, encrypted_container.encrypted_flag,
+      ContentType.to_bin(encrypted_container.content_type),
+      byte_size(encrypted_container.encrypted_data)::integer-32,
+      encrypted_container.encrypted_data::binary>>
   end
 
   defp to_struct_v1(inside_data) do
