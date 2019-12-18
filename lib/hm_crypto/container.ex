@@ -110,7 +110,7 @@ defmodule HmCrypto.Container do
           command,
           serial_number,
           Crypto.private_key(),
-          HmCrypto.AccessCertificate.access_certificate_binary() | HmCrypto.Crypto.public_key(),
+          HmCrypto.AccessCertificate.access_certificate_binary() | Crypto.public_key(),
           nonce,
           :v1
         ) :: secure_command
@@ -130,7 +130,7 @@ defmodule HmCrypto.Container do
   @spec enclose(
           t,
           Crypto.private_key(),
-          HmCrypto.AccessCertificate.access_certificate_binary() | HmCrypto.Crypto.public_key()
+          HmCrypto.AccessCertificate.access_certificate_binary() | Crypto.public_key()
         ) :: secure_command
   def enclose(container, private_key, public_key) do
     session_key = session_key(private_key, public_key, container.nonce)
@@ -314,7 +314,7 @@ defmodule HmCrypto.Container do
   @spec disclose_command(
           binary,
           Crypto.private_key(),
-          HmCrypto.AccessCertificate.access_certificate_binary() | HmCrypto.Crypto.public_key(),
+          HmCrypto.AccessCertificate.access_certificate_binary() | Crypto.public_key(),
           nonce()
         ) :: {:ok, binary} | {:error, disclose_error}
   def disclose_command(encrypted_command, private_key, access_certificate, nonce) do
