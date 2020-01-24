@@ -1,6 +1,6 @@
 # HmKitCrypto
 
-[![Build Status](https://github.com/highmobility/hm-crypto-elixir/workflows/CI/badge.svg)](https://github.com/highmobility/hm-crypto-elixir/actions)
+[![Build Status](https://github.com/highmobility/hmkit-crypto-elixir/workflows/CI/badge.svg)](https://github.com/highmobility/hmkit-crypto-elixir/actions)
 
 HmCrypto is securing communication between two parties using public key infrastructure.
 
