@@ -1,4 +1,4 @@
-# HmCrypto
+# HmKitCrypto
 
 [![Build Status](https://github.com/highmobility/hm-crypto-elixir/workflows/CI/badge.svg)](https://github.com/highmobility/hm-crypto-elixir/actions)
 
@@ -41,7 +41,7 @@ by adding `hm_crypto` to your list of dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:hm_crypto, github: "highmobility/hm-crypto-elixir", tag: "v2.0.0"}
+    {:hm_crypto, github: "highmobility/hmkit-crypto-elixir", tag: "v2.0.0"}
   ]
 end
 ```
