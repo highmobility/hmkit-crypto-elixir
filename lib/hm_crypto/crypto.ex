@@ -40,14 +40,14 @@ defmodule HmCrypto.Crypto do
   """
   @spec generate_key() :: {public_key, private_key}
   def generate_key do
-    with {public_key, private_key} when byte_size(private_key) == 32 <-
-           :crypto.generate_key(:ecdh, :secp256r1) do
+    {public_key, private_key} = :crypto.generate_key(:ecdh, :secp256r1)
+
+    if byte_size(private_key) == 32 do
       <<0x4, public_key::binary>> = public_key
       {public_key, private_key}
     else
-      {public_key, private_key} when byte_size(private_key) == 31 ->
-        <<0x4, public_key::binary>> = public_key
-        {public_key, <<0x00>> <> private_key}
+      <<0x4, public_key::binary>> = public_key
+      {public_key, <<0x00>> <> private_key}
     end
   end
 
