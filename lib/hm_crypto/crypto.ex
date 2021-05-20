@@ -75,14 +75,14 @@ defmodule HmCrypto.Crypto do
 
   @spec hmac(binary, binary, version) :: binary
   def hmac(key, message, :v1) do
-    :crypto.hmac(:sha256, key, expand_to_256(message))
+    :crypto.mac(:hmac, :sha256, key, expand_to_256(message))
   end
 
   def hmac(key, message, :v2) do
     message = expand_to_64_blocks(message)
     # chunk_64 = :erlang.split_binary(message, 64)
     # context = :crypto.hmac_init(
-    :crypto.hmac(:sha256, key, message)
+    :crypto.mac(:hmac, :sha256, key, message)
   end
 
   @doc """
