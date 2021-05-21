@@ -21,7 +21,6 @@ defmodule HmCrypto.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:timex, "~> 3.4"},
       {:propcheck, "~> 1.4", only: :test},
       {:credo, "~> 1.5", only: [:dev, :test]},
       {:dialyxir, "~> 1.1", only: [:dev, :test], runtime: false},
