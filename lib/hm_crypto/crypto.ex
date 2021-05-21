@@ -75,14 +75,13 @@ defmodule HmCrypto.Crypto do
 
   @spec hmac(binary, binary, version) :: binary
   def hmac(key, message, :v1) do
-    :crypto.mac(:hmac, :sha256, key, expand_to_256(message))
+    message = expand_to_256(message)
+    erl_crypto_hamc_func(key, message)
   end
 
   def hmac(key, message, :v2) do
     message = expand_to_64_blocks(message)
-    # chunk_64 = :erlang.split_binary(message, 64)
-    # context = :crypto.hmac_init(
-    :crypto.mac(:hmac, :sha256, key, message)
+    erl_crypto_hamc_func(key, message)
   end
 
   @doc """
@@ -325,5 +324,15 @@ defmodule HmCrypto.Crypto do
 
   defp padding(message, size) do
     message <> :binary.copy(<<0x00>>, size - byte_size(message))
+  end
+
+  if String.to_integer(to_string(:erlang.system_info(:otp_release))) >= 23 do
+    defp erl_crypto_hamc_func(key, message) do
+      :crypto.mac(:hmac, :sha256, key, message)
+    end
+  else
+    defp erl_crypto_hamc_func(key, message) do
+      :crypto.hmac(:sha256, key, message)
+    end
   end
 end
