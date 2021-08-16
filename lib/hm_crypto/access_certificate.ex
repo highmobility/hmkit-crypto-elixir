@@ -175,6 +175,6 @@ defmodule HmCrypto.AccessCertificate do
   end
 
   defp encode_date(date) do
-    :binary.list_to_bin([date.year - 2000, date.month, date.day, date.hour, date.minute])
+    <<date.year - 2000, date.month, date.day, date.hour, date.minute>>
   end
 end
