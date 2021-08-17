@@ -40,14 +40,14 @@ defmodule HmCrypto.Crypto do
   """
   @spec generate_key() :: {public_key, private_key}
   def generate_key do
-    with {public_key, private_key} when byte_size(private_key) == 32 <-
-           :crypto.generate_key(:ecdh, :secp256r1) do
+    {public_key, private_key} = :crypto.generate_key(:ecdh, :secp256r1)
+
+    if byte_size(private_key) == 32 do
       <<0x4, public_key::binary>> = public_key
       {public_key, private_key}
     else
-      {public_key, private_key} when byte_size(private_key) == 31 ->
-        <<0x4, public_key::binary>> = public_key
-        {public_key, <<0x00>> <> private_key}
+      <<0x4, public_key::binary>> = public_key
+      {public_key, <<0x00>> <> private_key}
     end
   end
 
@@ -75,14 +75,13 @@ defmodule HmCrypto.Crypto do
 
   @spec hmac(binary, binary, version) :: binary
   def hmac(key, message, :v1) do
-    :crypto.hmac(:sha256, key, expand_to_256(message))
+    message = expand_to_256(message)
+    erl_crypto_hamc_func(key, message)
   end
 
   def hmac(key, message, :v2) do
     message = expand_to_64_blocks(message)
-    # chunk_64 = :erlang.split_binary(message, 64)
-    # context = :crypto.hmac_init(
-    :crypto.hmac(:sha256, key, message)
+    erl_crypto_hamc_func(key, message)
   end
 
   @doc """
@@ -101,7 +100,7 @@ defmodule HmCrypto.Crypto do
           HmCrypto.AccessCertificate.access_certificate_binary() | HmCrypto.Crypto.public_key()
         ) :: binary
   def compute_key(private_key, public_key) when byte_size(public_key) == 64 do
-    private_key = {:ECPrivateKey, 1, private_key, {:namedCurve, :secp256r1}, <<>>}
+    private_key = private_key_record(private_key, <<>>)
     public_key = <<0x04>> <> public_key
     :public_key.compute_key({:ECPoint, public_key}, private_key)
   end
@@ -235,8 +234,7 @@ defmodule HmCrypto.Crypto do
     pem_entry =
       :public_key.pem_entry_encode(
         :PrivateKeyInfo,
-        {:ECPrivateKey, 1, private_key,
-         {:namedCurve, :pubkey_cert_records.namedCurves(:secp256r1)}, public_key}
+        private_key_record(private_key, public_key)
       )
 
     {:ok, :public_key.pem_encode([pem_entry])}
@@ -261,6 +259,11 @@ defmodule HmCrypto.Crypto do
   end
 
   defp extract_binary_from_pem({:ECPrivateKey, _, private_key, _, _}) do
+    # Support OTP 23 and older
+    {:ok, private_key}
+  end
+
+  defp extract_binary_from_pem({:ECPrivateKey, _, private_key, _, _, _}) do
     {:ok, private_key}
   end
 
@@ -325,5 +328,25 @@ defmodule HmCrypto.Crypto do
 
   defp padding(message, size) do
     message <> :binary.copy(<<0x00>>, size - byte_size(message))
+  end
+
+  if String.to_integer(to_string(:erlang.system_info(:otp_release))) >= 24 do
+    defp erl_crypto_hamc_func(key, message) do
+      :crypto.mac(:hmac, :sha256, key, message)
+    end
+
+    defp private_key_record(private_key, public_key) do
+      {:ECPrivateKey, 1, private_key, {:namedCurve, :pubkey_cert_records.namedCurves(:secp256r1)},
+       public_key, :asn1_NOVALUE}
+    end
+  else
+    defp erl_crypto_hamc_func(key, message) do
+      :crypto.hmac(:sha256, key, message)
+    end
+
+    defp private_key_record(private_key, public_key) do
+      {:ECPrivateKey, 1, private_key, {:namedCurve, :pubkey_cert_records.namedCurves(:secp256r1)},
+       public_key}
+    end
   end
 end

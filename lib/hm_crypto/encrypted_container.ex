@@ -35,7 +35,7 @@ defmodule HmCrypto.EncryptedContainer do
   @type container_parser_error :: :invalid_container_property
 
   import HmCrypto.ContainerHelper
-  alias HmCrypto.{Crypto, ContentType, HmCrypto.AccessCertificate}
+  alias HmCrypto.{Crypto, ContentType, AccessCertificate}
 
   @spec from_bin(binary) :: {:ok, t} | {:error, container_parser_error}
   def from_bin(container_binary) do

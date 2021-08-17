@@ -85,7 +85,7 @@ defmodule HmCrypto.Container do
     session_key = session_key(my_private_key, other_public_key, nonce)
 
     :aes_ecb
-    |> :crypto.block_encrypt(encryption_key(session_key), encryption_iv(nonce))
+    |> erl_crypto_encrypt_decrypt(encryption_key(session_key), encryption_iv(nonce))
     |> duplicate_cipher(byte_size(data))
     |> xor(data)
   end
@@ -377,4 +377,14 @@ defmodule HmCrypto.Container do
 
   defp encrypted?(0x00), do: {:ok, :not_encrypted}
   defp encrypted?(_), do: {:ok, :encrypted}
+
+  if String.to_integer(to_string(:erlang.system_info(:otp_release))) >= 24 do
+    defp erl_crypto_encrypt_decrypt(cipher, key, iv) do
+      :crypto.crypto_one_time(cipher, key, iv, [])
+    end
+  else
+    defp erl_crypto_encrypt_decrypt(cipher, key, iv) do
+      :crypto.block_encrypt(cipher, key, iv)
+    end
+  end
 end

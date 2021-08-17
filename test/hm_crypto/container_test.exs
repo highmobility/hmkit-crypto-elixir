@@ -139,6 +139,52 @@ defmodule HmCrypto.ContainerTest do
   end
 
   describe "encrypt_decrypt/3" do
+    test "OTP 23 & 24 should create the same encrypted_data binary" do
+      alice_key_pair =
+        {<<29, 68, 28, 22, 249, 195, 228, 87, 95, 190, 13, 199, 2, 190, 24, 208, 82, 84, 67, 178,
+           198, 59, 197, 29, 13, 205, 139, 18, 198, 87, 109, 152, 123, 203, 229, 197, 31, 121, 95,
+           18, 80, 152, 247, 156, 216, 73, 199, 18, 150, 219, 5, 87, 90, 172, 62, 113, 141, 170,
+           63, 250, 78, 217, 52, 250>>,
+         <<128, 241, 119, 67, 113, 130, 60, 224, 121, 186, 84, 145, 87, 168, 96, 192, 129, 170,
+           86, 182, 180, 136, 125, 171, 7, 70, 28, 229, 1, 145, 246, 229>>}
+
+      bob_key_pair =
+        {<<211, 100, 178, 68, 112, 154, 227, 213, 192, 203, 189, 32, 208, 127, 252, 25, 185, 78,
+           42, 131, 160, 223, 136, 72, 91, 203, 186, 238, 161, 74, 140, 25, 178, 56, 191, 222,
+           158, 239, 81, 238, 105, 85, 70, 76, 117, 68, 17, 191, 165, 99, 53, 4, 205, 251, 213,
+           90, 11, 138, 101, 82, 231, 213, 156, 127>>,
+         <<120, 238, 221, 100, 56, 255, 1, 78, 178, 235, 128, 169, 26, 3, 236, 109, 157, 255, 111,
+           64, 51, 223, 146, 116, 252, 107, 26, 150, 148, 225, 162, 115>>}
+
+      nonce = <<225, 210, 43, 146, 200, 54, 189, 205, 149>>
+
+      raw_data = <<208, 254, 244, 10, 10, 86, 214, 201, 211, 233>>
+
+      private_key = elem(alice_key_pair, 1)
+
+      public_key = elem(bob_key_pair, 0)
+
+      encrypted_data =
+        HmCrypto.Container.encrypt_decrypt(
+          raw_data,
+          private_key,
+          public_key,
+          nonce
+        )
+
+      assert encrypted_data == <<50, 56, 102, 83, 155, 218, 92, 89, 43, 132>>
+
+      decrypted_data =
+        HmCrypto.Container.encrypt_decrypt(
+          encrypted_data,
+          private_key,
+          public_key,
+          nonce
+        )
+
+      assert decrypted_data == raw_data
+    end
+
     property "symmetric encrypt_decrypt a binary data" do
       forall data <- [
                alice_key_pair: key_pair(),

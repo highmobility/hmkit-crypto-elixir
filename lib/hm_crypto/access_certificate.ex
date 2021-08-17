@@ -175,11 +175,6 @@ defmodule HmCrypto.AccessCertificate do
   end
 
   defp encode_date(date) do
-    date
-    |> Timex.Timezone.convert("Etc/UTC")
-    |> Timex.format!("%y,%m,%d,%H,%M", :strftime)
-    |> String.split(",")
-    |> Enum.map(&String.to_integer/1)
-    |> :binary.list_to_bin()
+    <<date.year - 2000, date.month, date.day, date.hour, date.minute>>
   end
 end
